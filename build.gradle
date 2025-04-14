@@ -1,0 +1,94 @@
+/**************************************************
+ *
+ *************************************************/
+// apply plugin: 'java'
+ext {
+	javaVersion = '1.8'
+}
+
+version     = '5.0.0'
+println "Project version: ${rootProject.version}"  // 버전 정보를 출력해 확인
+		
+def output = new ByteArrayOutputStream()
+// 최신 커밋 해시 값 가져오기
+exec {
+	commandLine 'git', 'rev-parse', 'HEAD'
+    standardOutput = output
+}
+def gitCommitHash = output.toString().trim()
+println "Latest Git Commit Hash: ${gitCommitHash}"
+
+// 해당 커밋의 상세 이력 가져오기 (Author와 Date만)
+def logAuthorOutput = new ByteArrayOutputStream()
+exec {
+    // --pretty=format에서 큰따옴표가 아닌 작은따옴표 사용
+    commandLine 'git', 'log', '-n', '1', '--pretty=format:%an'
+    standardOutput = logAuthorOutput
+}
+def gitAuthor = logAuthorOutput.toString().trim()
+println "Latest Git Commit Author: ${gitAuthor}"
+	
+def logDateOutput = new ByteArrayOutputStream()
+exec {
+    // --pretty=format에서 큰따옴표가 아닌 작은따옴표 사용
+    commandLine 'git', 'log', '-n', '1', '--pretty=format:%ad'
+    standardOutput = logDateOutput
+}
+def gitDate = logDateOutput.toString().trim()
+println "Latest Git Commit Date: ${gitDate}"
+subprojects {
+	version = rootProject.version  // 상위 프로젝트에서 버전 값 상속
+	group 'com.ecs.euc'
+
+    apply plugin: 'java'
+
+	sourceCompatibility = javaVersion
+   	repositories {
+		maven {	
+			url "http://10.0.55.102:8081/repository/maven-public/" 
+		}
+	}
+	dependencies {
+		compile group: 'com.ecs.base', 			name: 'ecs-base', 			version: '2.1.66'
+		compile group: 'com.ecs.msg', 			name: 'ecs-msg', 			version: '2.3.141'
+		compile group: 'com.ecs.msg', 			name: 'ecs-msg-rest', 		version: '1.0.105'
+
+	}    	
+}
+
+project(':ecs_svr_hr') {
+	dependencies {
+	}
+	jar {
+		archiveFileName = 'alert.jar'
+		clean {    
+			delete "$rootDir/package/bin/${jar.archiveName}"
+			print "delete => $rootDir/package/bin/${jar.archiveName}\n"
+		}
+		manifest {
+    		attributes(
+    			'Main-Class'	 	: 'com.ecs.euc.alert.AlertMain',
+    			'Class-Path'	 	: configurations.compile.collect { it.getName() }.join(' '),
+  				'Build-Timestamp'	: new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ").format(new Date()),
+        	    'Build-Jdk'      	: javaVersion,
+        	    'Build-OS'       	: "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
+        	    'User-Name'   	 	: "${System.properties['user.name']}",
+        	    'Version'        	: project.version,  	// 프로젝트 버전 정보 추가
+        	    'Latest-Git-Hash'	: gitCommitHash, 		// Git 커밋 해시 정보 추가 
+        	    'Latest-Git-Author' : gitAuthor,
+        	    'Latest-Git-Date' 	: gitDate
+       		)
+    	}
+      	from {
+			configurations.compile.collect {
+				it.isDirectory() ? it : zipTree(it)
+			}
+		}
+	 	from("src/main/java/log4j2.xml") {
+		    into ""
+		}
+		tasks.withType(Jar) {
+    	   	destinationDir = file("$rootDir/package/bin")
+    	}
+	}
+}
