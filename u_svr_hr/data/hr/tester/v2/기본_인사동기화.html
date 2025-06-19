@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+	table.type11 {
+	  border-collapse: separate;
+	  border-spacing: 1px;
+	  text-align: left;
+	  line-height: 1.5;
+	  margin: 20px 10px;
+	}
+	table.type11 th {
+	  width: 155px;
+	  font-weight: bold;
+	  vertical-align: top;
+	  color: #fff;
+	  background: #ce4869 ;
+	  border-style:solid;
+	  border-width:0px;
+	  font-family:Arial, sans-serif;
+	  padding:5px 5px;word-break:normal;
+	}
+	table.type11 td {
+	  width: 155px;	  
+	  vertical-align: top;
+	  border-bottom: 1px solid #ccc;
+	  background: #eee;
+	  border-style:solid;
+	  border-width:0px;
+	  font-family:Arial, sans-serif;
+	  padding:5px 5px;word-break:normal;
+	}
+</style>
+<head>
+<meta charset="UTF-8">
+<title>인사/Redis/PhoneDo</title>
+</head>
+<body>
+<table class="type11">
+	<thead>
+		<tr>
+	    	<th colspan="4">
+	    		IP
+	    		<input type="radio" name="serverIP" value="127.0.0.1"  checked="checked">127.0.0.1
+				<input type="radio" name="serverIP" value="127.0.0.1">127.0.0.1
+		    </th>
+		    <th colspan="2">
+		    	PORT
+		    	<input type="text" id="serverPort" value="3104">
+		    </th>
+		    <th colspan="1">
+		    	<select name="REST" id="REST">
+					<option value="http" selected="selected">HTTP</option>
+					<option value="https">HTTPS</option>
+				</select>
+		    </th>
+		    <th colspan="5" align="center">
+		    	#QUERY_FILE#
+		    </th>
+		    <th colspan="2" align="center">
+		    	LOGIN_ID
+		    	<select name="LOGIN_ID" id="LOGIN_ID">
+					<option value="ecstel" selected="selected">ecstel</option>
+					<option value="SI24028">SI24028</option>
+				</select>
+		    </th>
+		</tr>
+	</thead>
+  	<tbody>
+  		<!--  인사동기화 -->
+  		<tr>
+		 	<td colspan="1">인사동기화</td>
+			<td colspan="3">    		<input type="text"     id="URL1"      value="/v2/ecs/insa/sync" size="42"></td>
+			<td colspan="1">
+				<select name="METHOD1" id="METHOD1">
+					<option value="GET" selected="selected">GET</option>
+				</select>
+				<input type="button"   id="BTN1" 	 value="동기화" size="5">
+			</td>
+	    	<td colspan="7">TOKEN 		<input type="text" id="TOKEN1" value="20250101000000000000A02" size="36"></td>
+	    	<td colspan="2">ALARM_ID 	<input type="text" id="ALARM_ID1" 	size="5" value="5"></td>
+	   	</tr>
+	   	
+	   	<!--  USER -->
+  		<tr>
+		 	<td colspan="1">USER 갱신</td>
+		 	<td colspan="3">    			<input type="text"     id="URL10"      value="/v3/ecs/user" size="42"></td>
+		 	<td colspan="1">
+				<select name="METHOD10" id="METHOD10">
+					<option value="POST" selected="selected">POST(갱신)</option>
+					<option value="GET">GET(조회)</option>
+					<option value="DELETE">DELETE(삭제)</option>
+					<option value="PUT">PUT(추가)</option>
+				</select>
+		 		<input type="button"   id="BTN10" 	  	value="갱신" size="5">
+		 	</td>
+		 	<td colspan="2">사번				
+	    		<select name="ID10" id="ID10">
+					<option value="SI24028" selected="selected">SI24028</option>
+					<option value="SI24029">SI24029</option>
+				</select>
+			</td>
+	    	<td colspan="2">내선번호
+	    		<select name="DN10" id="DN10">
+					<option value="8412" selected="selected">8412</option>
+					<option value="8121200">8121200</option>
+					<option value="">미사용</option>
+				</select>	    
+	    	</td>
+	    	<td colspan="5"></td>
+	    </tr>
+	
+		<!--  PhoneDo 
+  		<tr>
+		 	<td colspan="1">PhoneDo동기화</td>
+		 	<td colspan="3">    			<input type="text"     id="URL4"      value="/v3/ecs/sync/phonedo" size="42"></td>
+		 	<td colspan="1">
+				<select name="METHOD4" id="METHOD4">
+					<option value="GET" selected="selected">GET</option>
+				</select>
+		 		<input type="button"   id="BTN4" 	  	value="동기화" size="5">
+		 	</td>
+	    	<td colspan="3">TOKEN			<input type="text" id="TOKEN4" 		  	value="20250101000000000000K15" size="36"></td>
+	    	<td colspan="2">필드 				
+	    		<select name="FIELD4" id="FIELD4">
+					<option value="USER_NO" selected="selected">사용자ID(USER_NO)</option>
+					<option value="DEVICE">내선번호(DN)</option>
+					<option value="DEPT_ID">부서ID(DEPT_ID)</option>
+					<option value="DEPT_NM">부서명(DEPT_NM)</option>
+				</select>
+			</td>
+	    	<td colspan="2">조건(%는 전체) 	<input type="text" id="SEARCH4" 		size="12"  value="SI24028"></td>
+	    	<td colspan="2">ALARM_ID 		<input type="text" id="ALARM_ID4" 		size="5" value="24"></td>
+	    </tr>
+	    -->
+	    
+	    <!--  PhoneDo 
+	   	<tr>
+		 	<td colspan="1">PhoneDo동기화</td>
+		 	<td colspan="3">    <input type="text"     id="URL5"      value="/v3/ecs/sync/phonedo" size="42"></td>
+		 	<td colspan="1">
+		 		<select name="METHOD5" id="METHOD5">
+					<option value="GET" selected="selected">GET</option>
+				</select>
+				<input type="button"   id="BTN5" 	  	value="동기화" size="5">
+			</td>
+	    	<td colspan="3">TOKEN			<input type="text" id="TOKEN5" 		  	value="20250101000000000001K15" size="36"></td>
+	    	<td colspan="2">필드 				
+	    		<select name="FIELD5" id="FIELD5">
+					<option value="USER_NO">사용자ID(USER_NO)</option>
+					<option value="DEVICE">내선번호(DN)</option>
+					<option value="DEPT_ID">부서ID(DEPT_ID)</option>
+					<option value="DEPT_NM" selected="selected">부서명(DEPT_NM)</option>
+				</select>
+			</td>
+	    	<td colspan="2">조건(%는 전체) 	<input type="text" id="SEARCH5" 		size="12"  value="Tech플랫폼"></td>
+	    	<td colspan="2">ALARM_ID 		<input type="text" id="ALARM_ID5" 		size="5" value="24"></td>
+	    </tr>
+		-->
+		   	
+		<!--  redis 동기화 -->
+  		<tr>
+		 	<td colspan="1">Redis</td>
+		 	<td colspan="3">    			<input type="text"     id="REDIS_URL"      value="http://127.0.0.1:8095/esp/api/v1/user/reset" size="42"></td>
+		 	<td colspan="1">
+				<select name="REDIS_METHOD" id="REDIS_METHOD">
+					<option value="GET" selected="selected">GET</option>
+				</select>
+				<input type="button"   id="REDIS_BTN" 	 	 	  value="동기화" size="5">
+			</td>
+	    	<td colspan="8">Header-apiKey	<input type="text"     id="REDIS_APKKEY" 		  value="1qAZxsW@3eDC" size="28"></td>
+	    	<td colspan="1"></td>
+	  	</tr>
+	  	
+		<tr><td colspan="14"><hr style="width:100%;height:1px;border:none;background-color:gray;"></td></tr>	<!-- 선긋기 -->
+		<tr>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		</tr>
+		<tr bgcolor=#E4E6EA>
+			<td class="tg-0lax" colspan=7>요청<textarea id ="reqValue" style="width:100%;height:500px;" ></textarea></td>
+			<td class="tg-0lax" colspan=7>응답<textarea id ="rtnValue" style="width:100%;height:500px;" ></textarea></td>
+		</tr>
+  </tbody>
+</table>	
+</body>
+<script src="./include/jquery-3.2.1.js"></script>
+<script src="./include/script.js"></script>
+<script>	
+
+	$( document ).ready(function() {
+		$("#BTN1").click(function(e) {
+			$("#rtnValue").empty();
+			$("#reqValue").empty();
+
+			var url 	 = $('#URL1').val();
+			var jsonData = "";
+			if($('#METHOD1').val() == 'GET') {
+				var valueGet = "";
+				valueGet = "?LOGIN_ID=" + $('#LOGIN_ID').val() + "&TOKEN=" + $('#TOKEN1').val() + "&ALARM_ID=" + $('#ALARM_ID1').val();
+				url += encodeURI(valueGet, "UTF-8");					
+				getReqValue();
+				$("#reqValue").append( document.createTextNode($('#METHOD1').val())  );
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));							
+				alert($('#METHOD1').val() + " " + url);
+			} 
+			$.ajax({    
+				url: $('#REST').val()+'://'+$("input[name='serverIP']:checked").val()+':'+$('#serverPort').val()+ url,
+				type: $('#METHOD1').val(),
+				data: jsonData,
+				contentType: 'application/json',
+				success: function(data) {
+					if( data ) {
+						var jsonData =  JSON.parse(data);
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+					} else {
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode( "200 OK "));
+					}					
+				}, 
+				error : function(request, status, error ) {  
+					var jsonData =  JSON.parse(request.responseText);
+					$("#rtnValue").empty();
+					getRtnValue();
+					$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));						
+				}
+			})
+		});
+	});	
+	
+	
+	$( document ).ready(function() {
+		$("#BTN10").click(function(e) {
+			$("#rtnValue").empty();
+			$("#reqValue").empty();
+
+			var url 	 = $('#URL10').val();
+			var jsonData = "";
+			if($('#METHOD10').val() == 'GET') {
+				var valueGet = "";
+				valueGet = "?ID=" + $('#ID10').val();
+				url += encodeURI(valueGet, "UTF-8");					
+				getReqValue();
+				$("#reqValue").append( document.createTextNode($('#METHOD10').val())  );
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));							
+				alert($('#METHOD10').val() + " " + url);
+			}
+			if($('#METHOD10').val() == 'POST') {
+				var valuePost   		= new Object();
+				valuePost.ID			= $('#ID10').val();		
+				valuePost.DEVICE 		= $('#DN10').val();
+
+				jsonData  = JSON.stringify(valuePost);	
+				var jsonData1 = JSON.parse(JSON.stringify(valuePost));	
+				getReqValue();
+				$("#reqValue").append(document.createTextNode($('#METHOD10').val()));
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));	
+				$("#reqValue").append(document.createTextNode("\n"));	
+				$("#reqValue").append(document.createTextNode(JSON.stringify(jsonData1, null, 4)));		
+				alert($('#METHOD10').val() + " " + jsonData);
+			}
+			$.ajax({    
+				url: $('#REST').val()+'://'+$("input[name='serverIP']:checked").val()+':'+$('#serverPort').val()+ url,
+				type: $('#METHOD10').val(),
+				data: jsonData,
+				contentType: 'application/json',
+				success: function(data) {
+					if( data ) {
+						var jsonData =  JSON.parse(data);
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+					} else {
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode( "200 OK "));
+					}					
+				}, 
+				error : function(request, status, error ) {  
+					var jsonData =  JSON.parse(request.responseText);
+					$("#rtnValue").empty();
+					getRtnValue();
+					$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));						
+				}
+			})
+		});
+	});	
+	
+	
+	$( document ).ready(function() {
+		$("#BTN2").click(function(e) {
+			$("#rtnValue").empty();
+			$("#reqValue").empty();
+
+			var url 	 = $('#URL2').val();
+			var jsonData = "";
+			if($('#METHOD2').val() == 'GET') {
+				var valueGet = "";
+				valueGet = "?LOGIN_ID=" + $('#LOGIN_ID').val() + "&TOKEN=" + $('#TOKEN2').val() + "&ALARM_ID=" + $('#ALARM_ID2').val();
+				url += encodeURI(valueGet, "UTF-8");					
+				getReqValue();
+				$("#reqValue").append( document.createTextNode($('#METHOD2').val())  );
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));							
+				alert($('#METHOD2').val() + " " + url);
+			} 
+			$.ajax({    
+				url: $('#REST').val()+'://'+$("input[name='serverIP']:checked").val()+':'+$('#serverPort').val()+ url,
+				type: $('#METHOD2').val(),
+				data: jsonData,
+				contentType: 'application/json',
+				success: function(data) {
+					if( data ) {
+						var jsonData =  JSON.parse(data);
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+					} else {
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode( "200 OK "));
+					}					
+				}, 
+				error : function(request, status, error ) {  
+					var jsonData =  JSON.parse(request.responseText);
+					$("#rtnValue").empty();
+					getRtnValue();
+					$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));						
+				}
+			})
+		});
+	});	
+	
+	$( document ).ready(function() {
+		$("#BTN3").click(function(e) {
+			$("#rtnValue").empty();
+			$("#reqValue").empty();
+
+			var url 	 = $('#URL3').val();
+			var jsonData = "";
+			if($('#METHOD3').val() == 'POST') {
+				var valuePost   		= new Object();
+				valuePost.LOGIN_ID		= $('#LOGIN_ID').val();		
+				valuePost.USERID 		= $('#USERID3').val();
+				valuePost.ENABLE		= $('#ENABLE3').val();	
+
+				jsonData  = JSON.stringify(valuePost);	
+				var jsonData1 = JSON.parse(JSON.stringify(valuePost));	
+				getReqValue();
+				$("#reqValue").append(document.createTextNode($('#METHOD3').val()));
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));	
+				$("#reqValue").append(document.createTextNode("\n"));	
+				$("#reqValue").append(document.createTextNode(JSON.stringify(jsonData1, null, 4)));		
+				alert($('#METHOD3').val() + " " + jsonData);
+			} 
+			$.ajax({    
+				url: $('#REST').val()+'://'+$("input[name='serverIP']:checked").val()+':'+$('#serverPort').val()+ url,
+				type: $('#METHOD3').val(),
+				data: jsonData,
+				contentType: 'application/json',
+				success: function(data) {
+					if( data ) {
+						var jsonData =  JSON.parse(data);
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+					} else {
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode( "200 OK "));
+					}					
+				}, 
+				error : function(request, status, error ) {  
+					var jsonData =  JSON.parse(request.responseText);
+					$("#rtnValue").empty();
+					getRtnValue();
+					$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));						
+				}
+			})
+		});
+	});	
+
+	<!-- redis -->
+	$( document ).ready(function() {
+	    $("#REDIS_BTN").click(function(e) {
+	        $("#rtnValue").empty();
+	        $("#reqValue").empty();
+
+	        var url = $('#REDIS_URL').val();
+	        var jsonData = "";
+
+	        if ($('#REDIS_METHOD').val() == 'GET') {
+	            getReqValue();
+	            $("#reqValue").append(document.createTextNode($('#REDIS_METHOD').val()));
+	            $("#reqValue").append(document.createTextNode("\n"));                    
+	            $("#reqValue").append(document.createTextNode(url));                            
+	            alert($('#REDIS_METHOD').val() + " " + url);
+	        } 
+
+	        $.ajax({
+	            url: url,
+	            type: $('#REDIS_METHOD').val(),
+	            data: jsonData,
+	            contentType: 'application/json',
+	            beforeSend: function(xhr) {
+	                xhr.setRequestHeader('apiKey', $('#REDIS_APKKEY').val());
+	            },
+	            success: function(data) {
+	                if (data) {
+	                    
+	                	var jsonData = data;	//	JSON.parse(data);
+	                    $("#rtnValue").empty();
+	                    getRtnValue();
+	                    $("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+	                } else {
+	                    $("#rtnValue").empty();
+	                    getRtnValue();
+	                    $("#rtnValue").append(document.createTextNode("200 OK"));
+	                }
+	            },
+	            error: function(request, status, error) {  
+	                var jsonData = JSON.parse(request.responseText);
+	                $("#rtnValue").empty();
+	                getRtnValue();
+	                $("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));                        
+	            }
+	        })
+	    });
+	});
+	
+
+	$( document ).ready(function() {
+		$("#BTN4").click(function(e) {
+			$("#rtnValue").empty();
+			$("#reqValue").empty();
+
+			var url 	 = $('#URL4').val();
+			var jsonData = "";
+			if($('#METHOD4').val() == 'GET') {
+				var valueGet = "";
+				valueGet = "?LOGIN_ID=" + $('#LOGIN_ID').val() + "&TOKEN=" + $('#TOKEN4').val() + "&ALARM_ID=" + $('#ALARM_ID4').val()  
+					+ "&FIELD=" + $('#FIELD4').val()  
+					+ "&SEARCH=" + $('#SEARCH4').val() ;
+				url += encodeURI(valueGet, "UTF-8");					
+				getReqValue();
+				$("#reqValue").append( document.createTextNode($('#METHOD4').val())  );
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));							
+				alert($('#METHOD4').val() + " " + url);
+			} 
+			$.ajax({    
+				url: $('#REST').val()+'://'+$("input[name='serverIP']:checked").val()+':'+$('#serverPort').val()+ url,
+				type: $('#METHOD4').val(),
+				data: jsonData,
+				contentType: 'application/json',
+				success: function(data) {
+					if( data ) {
+						var jsonData =  JSON.parse(data);
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+					} else {
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode( "200 OK "));
+					}					
+				}, 
+				error : function(request, status, error ) {  
+					var jsonData =  JSON.parse(request.responseText);
+					$("#rtnValue").empty();
+					getRtnValue();
+					$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));						
+				}
+			})
+		});
+	});		
+	
+	$( document ).ready(function() {
+		$("#BTN5").click(function(e) {
+			$("#rtnValue").empty();
+			$("#reqValue").empty();
+
+			var url 	 = $('#URL5').val();
+			var jsonData = "";
+			if($('#METHOD5').val() == 'GET') {
+				var valueGet = "";
+				valueGet = "?LOGIN_ID=" + $('#LOGIN_ID').val() + "&TOKEN=" + $('#TOKEN5').val() + "&ALARM_ID=" + $('#ALARM_ID5').val()  
+					+ "&FIELD=" + $('#FIELD5').val()  
+					+ "&SEARCH=" + $('#SEARCH5').val() ;
+				url += encodeURI(valueGet, "UTF-8");					
+				getReqValue();
+				$("#reqValue").append( document.createTextNode($('#METHOD5').val())  );
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));							
+				alert($('#METHOD5').val() + " " + url);
+			} 
+			$.ajax({    
+				url: $('#REST').val()+'://'+$("input[name='serverIP']:checked").val()+':'+$('#serverPort').val()+ url,
+				type: $('#METHOD5').val(),
+				data: jsonData,
+				contentType: 'application/json',
+				success: function(data) {
+					if( data ) {
+						var jsonData =  JSON.parse(data);
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+					} else {
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode( "200 OK "));
+					}					
+				}, 
+				error : function(request, status, error ) {  
+					var jsonData =  JSON.parse(request.responseText);
+					$("#rtnValue").empty();
+					getRtnValue();
+					$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));						
+				}
+			})
+		});
+	});	
+</script>
+</html>

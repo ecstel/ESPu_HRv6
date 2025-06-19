@@ -1,0 +1,214 @@
+
+
+
+-- esp_core.user_v source
+
+CREATE OR REPLACE VIEW esp_core.user_v
+AS SELECT uu.id,
+    um.auth_id,
+    uu.user_no,
+    uu.user_nm,
+    ug.id AS grade_id,
+    ug.grade_nm,
+    up.id AS position_id,
+    up.position_nm,
+    v.site_id,
+    v.site,
+    v.site_nm,
+    v.tenant_id,
+    v.tenant,
+    v.tenant_nm,
+    v.dept_id,
+    v.parent_id,
+    v.dept_nm,
+    v.abbr_nm,
+    v.name_tree,
+    v.code_tree,
+    v.depth AS dept_depth,
+    uu.dn,
+    uu.mobile,
+    uu.direct_number,
+    uu.workgroup_cd,
+    uu.user_state_cd,
+    uu.use_fl
+   FROM u_user uu
+     LEFT JOIN u_member um ON uu.id = um.user_id
+     LEFT JOIN u_site us ON uu.site_id = us.id
+     LEFT JOIN u_grade ug ON uu.grade_id = ug.id
+     LEFT JOIN u_position up ON uu.position_id = up.id
+     LEFT JOIN ( WITH RECURSIVE dept_hierarchy AS (
+                 SELECT us_1.id AS site_id,
+                    us_1.site,
+                    us_1.site_nm,
+                    ut.id AS tenant_id,
+                    ut.tenant,
+                    ut.tenant_nm,
+                    ud.id AS dept_id,
+                    ud.dept_nm,
+                    ud.abbr_nm,
+                    ud.parent_id,
+                    ud.use_fl,
+                    1 AS depth,
+                    ud.dept_nm::text AS name_tree,
+                    ud.id::text AS code_tree
+                   FROM u_dept ud
+                     LEFT JOIN u_tenant ut ON ut.id = ud.tenant_id
+                     LEFT JOIN u_site us_1 ON us_1.id = ut.site_id
+                  WHERE ud.parent_id IS NULL OR ud.parent_id = '-1'::integer
+                UNION ALL
+                 SELECT dh.site_id,
+                    dh.site,
+                    dh.site_nm,
+                    dh.tenant_id,
+                    dh.tenant,
+                    dh.tenant_nm,
+                    d.id AS dept_id,
+                    d.dept_nm,
+                    d.abbr_nm,
+                    d.parent_id,
+                    d.use_fl,
+                    dh.depth + 1,
+                    (dh.name_tree || '‡'::text) || d.dept_nm::text AS name_tree,
+                    (dh.code_tree || '‡'::text) || d.id::text AS code_tree
+                   FROM u_dept d
+                     JOIN dept_hierarchy dh ON d.parent_id = dh.dept_id
+                )
+         SELECT dept_hierarchy.site_id,
+            dept_hierarchy.site,
+            dept_hierarchy.site_nm,
+            dept_hierarchy.tenant_id,
+            dept_hierarchy.tenant,
+            dept_hierarchy.tenant_nm,
+            dept_hierarchy.dept_id,
+            dept_hierarchy.dept_nm,
+            dept_hierarchy.abbr_nm,
+            dept_hierarchy.parent_id,
+            dept_hierarchy.use_fl,
+            dept_hierarchy.depth,
+            dept_hierarchy.name_tree,
+            dept_hierarchy.code_tree
+           FROM dept_hierarchy) v ON uu.dept_id = v.dept_id;
+           
+           
+           
+  -- esp_core.dept_v source
+
+CREATE OR REPLACE VIEW esp_core.dept_v
+AS WITH RECURSIVE dept_hierarchy AS (
+         SELECT ns.id AS site_id,
+            ns.site,
+            ns.site_nm,
+            nt.id AS tenant_id,
+            nt.tenant,
+            nt.tenant_nm,
+            nd.id AS dept_id,
+            nd.dept_nm,
+            nd.abbr_nm,
+            nd.dept_code,
+            nd.branch_code,
+            nd.parent_id,
+            nd.dept_ord,
+            1 AS depth,
+            nd.dept_nm::text AS name_tree,
+            nd.id::text AS code_tree,
+            nd.use_fl
+           FROM u_site ns
+             JOIN u_tenant nt ON ns.id = nt.site_id
+             JOIN u_dept nd ON nt.id = nd.tenant_id
+          WHERE nd.parent_id IS NULL OR nd.parent_id = '-1'::integer
+        UNION ALL
+         SELECT dh.site_id,
+            dh.site,
+            dh.site_nm,
+            dh.tenant_id,
+            dh.tenant,
+            dh.tenant_nm,
+            d.id AS dept_id,
+            d.dept_nm,
+            d.abbr_nm,
+            d.dept_code,
+            d.branch_code,
+            d.parent_id,
+            d.dept_ord,
+            dh.depth + 1,
+            (dh.name_tree || '‡'::text) || d.dept_nm::text AS name_tree,
+            (dh.code_tree || '‡'::text) || d.id::text AS code_tree,
+            d.use_fl
+           FROM u_dept d
+             JOIN dept_hierarchy dh ON d.parent_id = dh.dept_id
+        )
+ SELECT site_id,
+    site,
+    site_nm,
+    tenant_id,
+    tenant,
+    tenant_nm,
+    dept_id,
+    dept_nm,
+    abbr_nm,
+    dept_code,
+    branch_code,
+    parent_id,
+    dept_ord,
+    depth,
+    name_tree,
+    code_tree,
+    use_fl
+   FROM dept_hierarchy;
+   
+   
+ 
+ -- esp_core.code_v source
+
+CREATE OR REPLACE VIEW esp_core.code_v
+AS WITH RECURSIVE code_hierarchy AS (
+         SELECT u_code.id,
+            u_code.code_key,
+            u_code.code_value,
+            u_code.code_nm,
+            u_code.code_ord,
+            u_code.parent_id,
+            1 AS depth,
+            u_code.id::text AS path,
+            u_code.code_nm AS path_nm_full,
+            u_code.id AS root,
+            u_code.code_nm AS root_nm,
+            u_code.code_key AS root_key,
+            u_code.code_value AS root_value,
+            u_code.use_fl
+           FROM u_code
+          WHERE u_code.parent_id = '-1'::integer AND u_code.use_fl::text = 'Y'::text
+        UNION ALL
+         SELECT c.id,
+            c.code_key,
+            c.code_value,
+            c.code_nm,
+            c.code_ord,
+            c.parent_id,
+            ch.depth + 1,
+            (ch.path || '‡'::text) || c.id::text,
+            (ch.path_nm_full::text || '‡'::text) || c.code_nm::text,
+            ch.root,
+            ch.root_nm,
+            ch.root_key,
+            ch.root_value,
+            c.use_fl
+           FROM u_code c
+             JOIN code_hierarchy ch ON c.parent_id = ch.id
+          WHERE c.use_fl::text = 'Y'::text
+        )
+ SELECT id,
+    code_key,
+    code_value,
+    code_nm,
+    code_ord,
+    parent_id,
+    depth,
+    path,
+    path_nm_full,
+    root,
+    root_nm,
+    root_key,
+    root_value,
+    use_fl
+   FROM code_hierarchy;           

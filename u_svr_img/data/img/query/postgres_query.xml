@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+	<DATABASE>postgres</DATABASE>
+    <HOSTNAME>10.0.7.95</HOSTNAME>
+    <DBNAME>ecsdb</DBNAME>
+    <DBUSER>esp</DBUSER>
+    <DBPASSWORD>Zt+d3lC/P8z0uwxKPtIweg==</DBPASSWORD>
+    <DBPORT>5432</DBPORT>
+
+	 <!--  USER_ID, PICTURE, PICURL -->
+	 <IMAGE>
+	 	<![CDATA[	
+			SELECT
+				USER_NO 		  	AS USER_ID,
+				USER_NO || '.jpg' 	AS PICTURE,
+				'' 					AS PICURL
+			FROM U_USER -- WHERE USER_NO NOT IN ('SE15240') AND USER_NO = 'SI24028'
+		  ]]>
+	</IMAGE>
+	
+	<!-- 
+	<CLEAR>	<![CDATA[	UPDATE U_USER SET PICTURE = NULL												]]>	</CLEAR>
+	<UPDATE><![CDATA[	UPDATE U_USER SET PICTURE = #PICTURE#<STRING> WHERE USER_ID = #USER_ID#<STRING>	]]>	</UPDATE>	
+	 -->
+	 
+	<!-- Postgres의 경우 해당 코드가 소스에 존재하기 때문에 아래 INSERT_BATCH, UPDATE_BULK 항목은 불필요함 -->
+	<INSERT_BATCH>
+		<![CDATA[	
+			INSERT INTO E_BATCHWORK (ID, APP_URL, REQ_USER, STATUS, TITLE, DESCRIPTION, RESULT, CAUSE, YMD, REQ_DT) 
+			VALUES 
+			(
+				(SELECT COALESCE(MAX(ID), 0) + 1 FROM E_BATCHWORK),
+				#REQ_URL#<STRING>, #REQ_USER#<STRING>, #STATUS#<STRING>, #TITLE#<STRING>, #DESCRIPTION#<STRING>, #RESULT#<STRING>, #CAUSE#<STRING>,
+				CURRENT_DATE, CURRENT_TIMESTAMP
+			)
+		]]>
+	</INSERT_BATCH>
+	<UPDATE_BULK>
+		<![CDATA[	
+            INSERT INTO E_BULKWORK ( ID, TOKEN, APP_URL, REQ_URL, REQ_USER, REQ_DATA, STATUS, TITLE, DESCRIPTION, FILE_NM, RESULT, CAUSE, CMPLT_DT, REQ_DT) VALUES (
+                (SELECT COALESCE(MAX(ID), 0) + 1 FROM E_BULKWORK),
+                #TOKEN#<STRING>,
+                #REQ_URL#<STRING>,
+                #REQ_URL#<STRING>,
+                #REQ_USER#<STRING>,
+                #REQ_DATA#<STRING>,
+                #STATUS#<STRING>,
+                #TITLE#<STRING>,
+                #DESCRIPTION#<STRING>,
+                #FILE_NM#<STRING>,
+                #RESULT#<STRING>,
+                #CAUSE#<STRING>,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )
+            ON CONFLICT (TOKEN) DO UPDATE
+            SET
+                STATUS      = EXCLUDED.STATUS,
+                TITLE       = EXCLUDED.TITLE,
+                DESCRIPTION = EXCLUDED.DESCRIPTION,
+                FILE_NM     = EXCLUDED.FILE_NM,
+                RESULT      = EXCLUDED.RESULT,
+                CAUSE       = EXCLUDED.CAUSE,
+                CMPLT_DT    = EXCLUDED.CMPLT_DT
+		]]>
+	</UPDATE_BULK>
+	<!-- 
+	<UPDATE_BULK>
+		<![CDATA[	
+			UPDATE E_BULKWORK SET STATUS = 'COMPLETE', TITLE = #TITLE#<STRING>, DESCRIPTION = #DESCRIPTION#<STRING>, 
+			FILE_NM = #FILE_NM#<STRING>, RESULT = #RESULT#<STRING>, CAUSE = #CAUSE#<STRING>, CMPLT_DT = CURRENT_TIMESTAMP	
+			WHERE TOKEN = #TOKEN#<STRING>
+		]]>
+	</UPDATE_BULK>
+	-->	
+</sqlMap>

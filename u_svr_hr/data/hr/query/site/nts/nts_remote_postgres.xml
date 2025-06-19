@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+
+    <!-- 전화관리 -->
+    <DATABASE>postgres</DATABASE>
+    <HOSTNAME>10.80.100.183</HOSTNAME>
+    <DBNAME>telsla_prd</DBNAME>
+    <DBUSER>uc_user</DBUSER>
+    <DBPASSWORD>ikEJpz7y1TiBQn6Mp4Q07Q==</DBPASSWORD>
+    <DBPORT>5432</DBPORT>
+ 
+ 	<GET_SOURCE_NTS>
+        <![CDATA[
+            SELECT
+                EXTENSION   AS USER_NO,
+                EXTENSION   AS USER_NM,
+                USR_TTL     AS GRADE_NM,
+              	ORG_A       AS SITE_NM,
+                ORG_B       AS TENANT_NM,
+                ORG_C       AS IBG_NM,
+                ORG_D       AS AGTTEAM_NM,
+               	USR_DISP    AS DISPLAY,
+                USR_STAT    AS STAT,
+                USR_INFP    AS INFOPUSH,
+                AGENT_ID    AS WORK
+            FROM V_UC_LINE_INFO WHERE ORG_A LIKE '%부산%'
+            ORDER BY EXTENSION
+        ]]>
+    </GET_SOURCE_NTS>
+</sqlMap>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Properties>
+        <Property name="HOME">.</Property>
+        <Property name="APP">alert</Property>
+    </Properties>
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="[%d{MM-dd HH:mm:ss}]%5p - %m%n"/>
+            <ThresholdFilter level="info"/>
+        </Console>
+        <RollingFile name="LOG_INFO" fileName="${HOME}/log/${APP}/${APP}_info.log"
+                     filePattern="${HOME}/log/${APP}/%d{yyyy-MM-dd}/${APP}_info_%d{yyyy-MM-dd.HH}.%i.log">
+            <PatternLayout pattern="[%d{MM-dd HH:mm:ss}]%5p - %m%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="20MB"/>
+            </Policies>
+            <ThresholdFilter level="info"/>
+        </RollingFile>
+        <RollingFile name="LOG_TRACE" fileName="${HOME}/log/${APP}/${APP}_trace.log"
+                     filePattern="${HOME}/log/${APP}/%d{yyyy-MM-dd}/${APP}_trace_%d{yyyy-MM-dd.HH}.%i.log">
+            <PatternLayout pattern="[%d{MM-dd HH:mm:ss}]%5p - %m%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="20MB"/>
+            </Policies>
+            <ThresholdFilter level="trace"/>
+        </RollingFile>
+        <RollingFile name="LOG_DEBUG" fileName="${HOME}/log/${APP}/${APP}_debug.log"
+                     filePattern="${HOME}/log/${APP}/%d{yyyy-MM-dd}/${APP}_debug_%d{yyyy-MM-dd.HH}.%i.log">
+            <PatternLayout pattern="[%d{MM-dd HH:mm:ss}]%5p - %m%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="20MB"/>
+            </Policies>
+            <ThresholdFilter level="debug"/>
+        </RollingFile>
+        <RollingFile name="LOG_ERROR" fileName="${HOME}/log/${APP}/${APP}_error.log"
+                     filePattern="${HOME}/log/${APP}/%d{yyyy-MM-dd}/${APP}_error_%d{yyyy-MM-dd.HH}.%i.log">
+            <PatternLayout pattern="[%d{MM-dd HH:mm:ss}]%5p - %m%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="20MB"/>
+            </Policies>
+            <ThresholdFilter level="error"/>
+        </RollingFile>
+        <RollingFile name="LOG_NETTY" fileName="${HOME}/log/${APP}/${APP}_netty.log"
+                     filePattern="${HOME}/log/${APP}/%d{yyyy-MM-dd}/${APP}_netty_%d{yyyy-MM-dd.HH}.%i.log">
+            <PatternLayout pattern="[%d{MM-dd HH:mm:ss}]%5p - %m%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="20MB"/>
+            </Policies>
+            <ThresholdFilter level="trace"/>
+        </RollingFile>
+    </Appenders>
+    <Loggers>
+        <logger name="com.ecs.base.comm.log.info">
+            <level value="info"/>
+            <appender-ref ref="LOG_INFO"/>
+            <AppenderRef ref="console"/>
+        </logger>
+        <logger name="com.ecs.base.comm.log.trace">
+            <level value="trace"/>
+            <appender-ref ref="LOG_TRACE"/>
+        </logger>
+        <logger name="com.ecs.base.comm.log.debug">
+            <level value="debug"/>
+            <appender-ref ref="LOG_DEBUG"/>
+        </logger>
+        <logger name="com.ecs.base.comm.log.error">
+            <level value="error"/>
+            <appender-ref ref="LOG_ERROR"/>
+        </logger>
+        <logger name="io.netty">
+            <level value="trace"/>
+            <appender-ref ref="LOG_NETTY"/>
+        </logger>
+        <logger name="org.apache.http">
+            <level value="info"/>
+            <appender-ref ref="LOG_INFO"/>
+        </logger>
+        <Root level="trace">
+        </Root>
+    </Loggers>
+</Configuration>

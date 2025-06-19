@@ -1,12 +1,17 @@
+import java.text.SimpleDateFormat
+
 /**************************************************
  *
  *************************************************/
-// apply plugin: 'java'
-ext {
-	javaVersion = '1.8'
+plugins {
+	id 'java'
 }
+// JVM 타겟 버전을 한 곳에서만 정의
+ext {
+	jvmTargetVersion = 17
+}	// jdk17(17), jdk11(11), jdk1.8(8)
 
-version     = '5.0.0'
+version     = '6.0.0'
 println "Project version: ${rootProject.version}"  // 버전 정보를 출력해 확인
 		
 def output = new ByteArrayOutputStream()
@@ -21,7 +26,7 @@ println "Latest Git Commit Hash: ${gitCommitHash}"
 // 해당 커밋의 상세 이력 가져오기 (Author와 Date만)
 def logAuthorOutput = new ByteArrayOutputStream()
 exec {
-    // --pretty=format에서 큰따옴표가 아닌 작은따옴표 사용
+    /* --pretty=formats 큰따옴표가 아닌 작은따옴표 사용 */
     commandLine 'git', 'log', '-n', '1', '--pretty=format:%an'
     standardOutput = logAuthorOutput
 }
@@ -29,66 +34,275 @@ def gitAuthor = logAuthorOutput.toString().trim()
 println "Latest Git Commit Author: ${gitAuthor}"
 	
 def logDateOutput = new ByteArrayOutputStream()
-exec {
-    // --pretty=format에서 큰따옴표가 아닌 작은따옴표 사용
+final def result = exec {
+    /* --pretty=formats에서 큰따옴표가 아닌 작은따옴표 사용 */
     commandLine 'git', 'log', '-n', '1', '--pretty=format:%ad'
     standardOutput = logDateOutput
 }
+result
 def gitDate = logDateOutput.toString().trim()
 println "Latest Git Commit Date: ${gitDate}"
+
 subprojects {
 	version = rootProject.version  // 상위 프로젝트에서 버전 값 상속
-	group 'com.ecs.euc'
+	group 'com.ecs.esp.u'
 
     apply plugin: 'java'
 
-	sourceCompatibility = javaVersion
+	java {
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(jvmTargetVersion)
+		}
+	}
+
+	// ▶ 모든 서브프로젝트의 Jar 작업에 Build-Jdk 항목을 toolchain 버전으로 기록
+    tasks.withType(Jar).configureEach { Jar jarTask ->
+        // toolchain 런처 버전도 여기서 jvmTargetVersion 변수로
+        def launcher = javaToolchains
+            .launcherFor { languageVersion = JavaLanguageVersion.of(jvmTargetVersion) }
+            .get()
+        jarTask.manifest.attributes(
+            'Build-Jdk': launcher.metadata.languageVersion.asInt().toString()
+        )
+   }
+
    	repositories {
 		maven {	
-			url "http://10.0.55.102:8081/repository/maven-public/" 
+			url "http://10.0.55.102:8081/repository/maven-public/"
+			allowInsecureProtocol = true    // <-- HTTP 사용 허용
+
+			// POM 없이 JAR 만 있어도 조회하도록 메타데이터 소스 재정의
+			metadataSources {
+				// 1) mavenPom(): POM이 있을 때 우선 시도
+				// 2) artifact(): JAR이 있을 때 시도
+			//	mavenPom()
+				artifact()
+			}
+			// 만약 아예 POM 조회조차 하지 않고 JAR만 당장 당겨오려면 아래처럼 mavenPom()을 빼고
+			// metadataSources { artifact() }
 		}
 	}
 	dependencies {
-		compile group: 'com.ecs.base', 			name: 'ecs-base', 			version: '2.1.66'
-		compile group: 'com.ecs.msg', 			name: 'ecs-msg', 			version: '2.3.141'
-		compile group: 'com.ecs.msg', 			name: 'ecs-msg-rest', 		version: '1.0.105'
+		implementation 'com.ecs.msg:ecs-msg:2.3.143'
+		implementation 'com.ecs.msg:ecs-msg-rest:1.0.108'
+		implementation 'com.ecs.base:ecs-base:2.1.67'
 
-	}    	
+	//	implementation fileTree(dir: '../libs/base', include: ['*.jar'])
+	//	implementation fileTree(dir: '../libs/msg/rest', include: ['*.jar'])
+
+		implementation 'org.openjdk.nashorn:nashorn-core:15.4'			//	java15 removed
+		// ASM core
+		implementation 'org.ow2.asm:asm:9.5'
+		// ASM Type 클래스를 포함하는 추가 모듈 (보통 core만으로 충분)
+		// implementation 'org.ow2.asm:asm-tree:9.5'
+	}
+}
+project(':u_com') {
+	dependencies {
+		implementation 'com.sun.activation:javax.activation:1.2.0'		//	java11 removed
+		implementation 'javax.annotation:javax.annotation-api:1.3.2'	//	java11 removed
+	}
 }
 
-project(':ecs_svr_hr') {
+project(':u_svr_hr') {
 	dependencies {
+		// ecs_comm 모듈 참조 추가
+		implementation project(':u_com')
+
+		implementation 'com.sun.activation:javax.activation:1.2.0'		//	java11 removed
+		implementation 'javax.annotation:javax.annotation-api:1.3.2'	//	java11 removed
 	}
+
 	jar {
-		archiveFileName = 'alert.jar'
-		clean {    
-			delete "$rootDir/package/bin/${jar.archiveName}"
-			print "delete => $rootDir/package/bin/${jar.archiveName}\n"
-		}
-		manifest {
-    		attributes(
-    			'Main-Class'	 	: 'com.ecs.euc.alert.AlertMain',
-    			'Class-Path'	 	: configurations.compile.collect { it.getName() }.join(' '),
-  				'Build-Timestamp'	: new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ").format(new Date()),
-        	    'Build-Jdk'      	: javaVersion,
-        	    'Build-OS'       	: "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
-        	    'User-Name'   	 	: "${System.properties['user.name']}",
-        	    'Version'        	: project.version,  	// 프로젝트 버전 정보 추가
-        	    'Latest-Git-Hash'	: gitCommitHash, 		// Git 커밋 해시 정보 추가 
-        	    'Latest-Git-Author' : gitAuthor,
-        	    'Latest-Git-Date' 	: gitDate
-       		)
-    	}
-      	from {
-			configurations.compile.collect {
-				it.isDirectory() ? it : zipTree(it)
+		// 중복된 엔트리를 만났을 때 제외(EXCLUDE) 처리
+		duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+		def processname = 'hr'
+		// 오늘 날짜를 yyyyMMddHHmmss 형식으로 포맷
+		def today = new Date().format('yyyyMMdd-HHmmss')
+
+		// 파일 이름을 hr.오늘날짜.jar 로 설정
+		archiveFileName.set("${processname}.${today}.jar")
+		destinationDirectory.set(file("$rootDir/package/bin"))
+		// doFirst 블록을 활용하여 기존 파일을 삭제
+		doFirst {
+			def binDir = file("$rootDir/package/bin")
+			def oldJars = fileTree(dir: binDir, include: "${processname}.*.jar")  // 기존에 있는 hr*.jar 파일들을 검색
+
+			if (oldJars.isEmpty()) {
+				println "No old ${processname}*.jar files to delete in $binDir"
+			} else {
+				println "Deleting old ${processname}*.jar files in $binDir:"
+				oldJars.each { File f ->
+					println "  -> $f"
+				}
+				project.delete(oldJars)  // 삭제
 			}
 		}
-	 	from("src/main/java/log4j2.xml") {
-		    into ""
+
+		// toolchain
+		def launcher = javaToolchains
+		            .launcherFor { languageVersion = JavaLanguageVersion.of(jvmTargetVersion) }
+		            .get()
+
+		// JAR 매니페스트 설정
+		manifest {
+			attributes(
+					'Multi-Release'		: 'true',
+					'Main-Class'        : 'com.ecs.esp.u.hr.HRMain',
+					'Class-Path' 		: configurations.runtimeClasspath.collect { it.name }.join(' '),
+					'Build-Timestamp'   : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ").format(new Date()),
+					'Build-Jdk'			: launcher.metadata.languageVersion.asInt().toString(),
+					'Build-OS'          : "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
+					'User-Name'         : "${System.properties['user.name']}",
+					'Version'           : project.version,   // 프로젝트 버전 정보 추가
+					'Latest-Git-Hash'   : gitCommitHash,      // Git 커밋 해시 정보 추가
+					'Latest-Git-Author' : gitAuthor,
+					'Latest-Git-Date'   : gitDate
+			)
 		}
-		tasks.withType(Jar) {
-    	   	destinationDir = file("$rootDir/package/bin")
-    	}
+		from {
+			configurations.runtimeClasspath.collect { dep ->
+				dep.isDirectory() ? dep : zipTree(dep)
+			}
+		}
+		from("src/main/java/log4j2.xml") {
+			into ""  // log4j2.xml 파일을 루트 디렉토리에 복사
+		}
+	}
+}
+
+project(':u_svr_img') {
+	dependencies {
+		// ecs_comm 모듈 참조 추가
+		implementation project(':u_com')
+
+		implementation 'com.sun.activation:javax.activation:1.2.0'			//	java11 removed
+	}
+
+	jar {
+		// 중복된 엔트리를 만났을 때 제외(EXCLUDE) 처리
+		duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+		def processname = 'img'
+		// 오늘 날짜를 yyyyMMddHHmmss 형식으로 포맷
+		def today = new Date().format('yyyyMMdd-HHmmss')
+		// 파일 이름을 hr.오늘날짜.jar 로 설정
+		archiveFileName.set("${processname}.${today}.jar")
+		destinationDirectory.set(file("$rootDir/package/bin"))
+
+		// doFirst 블록을 활용하여 기존 파일을 삭제
+		doFirst {
+			def binDir = file("$rootDir/package/bin")
+			def oldJars = fileTree(dir: binDir, include: "${processname}.*.jar")  // 기존에 있는 hr*.jar 파일들을 검색
+
+			if (oldJars.isEmpty()) {
+				println "No old ${processname}*.jar files to delete in $binDir"
+			} else {
+				println "Deleting old ${processname}*.jar files in $binDir:"
+				oldJars.each { File f ->
+					println "  -> $f"
+				}
+				project.delete(oldJars)  // 삭제
+			}
+		}
+
+		// toolchain
+		def launcher = javaToolchains
+				.launcherFor { languageVersion = JavaLanguageVersion.of(jvmTargetVersion) }
+				.get()
+
+		// JAR 매니페스트 설정
+		manifest {
+			attributes(
+					'Multi-Release'		: 'true',
+					'Main-Class'        : 'com.ecs.esp.u.img.IMGMain',
+					'Class-Path' 		: configurations.runtimeClasspath.collect { it.name }.join(' '),
+					'Build-Timestamp'  	: new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ").format(new Date()),
+					'Build-Jdk'			: launcher.metadata.languageVersion.asInt().toString(),
+					'Build-OS'          : "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
+					'User-Name'         : "${System.properties['user.name']}",
+					'Version'           : project.version,   // 프로젝트 버전 정보 추가
+					'Latest-Git-Hash'   : gitCommitHash,      // Git 커밋 해시 정보 추가
+					'Latest-Git-Author' : gitAuthor,
+					'Latest-Git-Date'   : gitDate
+			)
+		}
+		from {
+			configurations.runtimeClasspath.collect { dep ->
+				dep.isDirectory() ? dep : zipTree(dep)
+			}
+		}
+		from("src/main/java/log4j2.xml") {
+			into ""  // log4j2.xml 파일을 루트 디렉토리에 복사
+		}
+	}
+}
+
+project(':u_svr_alert') {
+	dependencies {
+		// ecs_comm 모듈 참조 추가
+		implementation project(':u_com')
+
+		implementation 'com.sun.activation:javax.activation:1.2.0'		//	java11 removed
+		implementation 'javax.annotation:javax.annotation-api:1.3.2'	//	java11 removed
+	}
+
+	jar {
+		// 중복된 엔트리를 만났을 때 제외(EXCLUDE) 처리
+		duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+		def processname = 'alert'
+		// 오늘 날짜를 yyyyMMddHHmmss 형식으로 포맷
+		def today = new Date().format('yyyyMMdd-HHmmss')
+
+		// 파일 이름을 hr.오늘날짜.jar 로 설정
+		archiveFileName.set("${processname}.${today}.jar")
+		destinationDirectory.set(file("$rootDir/package/bin"))
+		// doFirst 블록을 활용하여 기존 파일을 삭제
+		doFirst {
+			def binDir = file("$rootDir/package/bin")
+			def oldJars = fileTree(dir: binDir, include: "${processname}.*.jar")  // 기존에 있는 hr*.jar 파일들을 검색
+
+			if (oldJars.isEmpty()) {
+				println "No old ${processname}*.jar files to delete in $binDir"
+			} else {
+				println "Deleting old ${processname}*.jar files in $binDir:"
+				oldJars.each { File f ->
+					println "  -> $f"
+				}
+				project.delete(oldJars)  // 삭제
+			}
+		}
+
+		// toolchain
+		def launcher = javaToolchains
+				.launcherFor { languageVersion = JavaLanguageVersion.of(jvmTargetVersion) }
+				.get()
+
+		// JAR 매니페스트 설정
+		manifest {
+			attributes(
+					'Multi-Release'		: 'true',
+					'Main-Class'        : 'com.ecs.esp.u.alert.ALERTMain',
+					'Class-Path' 		: configurations.runtimeClasspath.collect { it.name }.join(' '),
+					'Build-Timestamp'   : new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSZ").format(new Date()),
+					'Build-Jdk'			: launcher.metadata.languageVersion.asInt().toString(),
+					'Build-OS'          : "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
+					'User-Name'         : "${System.properties['user.name']}",
+					'Version'           : project.version,   // 프로젝트 버전 정보 추가
+					'Latest-Git-Hash'   : gitCommitHash,      // Git 커밋 해시 정보 추가
+					'Latest-Git-Author' : gitAuthor,
+					'Latest-Git-Date'   : gitDate
+			)
+		}
+		from {
+			configurations.runtimeClasspath.collect { dep ->
+				dep.isDirectory() ? dep : zipTree(dep)
+			}
+		}
+		from("src/main/java/log4j2.xml") {
+			into ""  // log4j2.xml 파일을 루트 디렉토리에 복사
+		}
 	}
 }

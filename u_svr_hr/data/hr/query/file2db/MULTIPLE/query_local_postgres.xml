@@ -1,0 +1,506 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+	<URL></URL>
+	<DATABASE>postgres</DATABASE>
+   	<HOSTNAME>10.0.7.95</HOSTNAME>
+	<DBNAME>ecsdb</DBNAME>
+   	<DBUSER>esp</DBUSER>
+   	<DBPASSWORD>Zt+d3lC/P8z0uwxKPtIweg==</DBPASSWORD>
+	<DBPORT>5432</DBPORT>
+	
+	<!-- 로컬 DB를 읽어서 처리를 위한 시작 -->
+	<GET_SOURCE_HR_DEPT>
+		<![CDATA[
+			WITH RECURSIVE DeptTree AS (
+			 	SELECT 
+			 		'EX'			as SITE, 	
+			 		'한국도로공사'		as SITE_NM, 
+			 		'EX'			as TENANT, 	
+			 		'한국도로공사'		as TENANT_NM, 
+			  		D.hgbsmyeong 	as DEPT_NM,
+			  		D.bscode 		as DEPT_CODE,
+			  		regexp_replace(regexp_replace(D.hgbsmyeong, '\"', '', 'g'), '[<>&%]', ' ', 'g')  as ABBR_NM,
+			  		null::varchar	aS DEPT_PARENT_CODE,
+			  	  	null::varchar	as BRANCH_CODE,						-- 지점코드
+			      	D.hgbsmyeong  	as NAME_TREE,   					-- 최상위 부서 이름으로 초기화
+			        D.bscode 		as CODE_TREE,   					-- 최상위 부서 코드로 초기화
+			        1 				as LEVEL               				-- ROOT 레벨 1
+			  	FROM ESP_CORE.HR_PHABSCDM D where jsswbscode is null or jsswbscode = ''
+			    UNION ALL
+			  	-- 하위 부서를 재귀적으로 선택
+			    SELECT 
+			     	'EX'			as SITE, 	
+			     	'한국도로공사'		as SITE_NM, 
+			 		'EX'			as TENANT, 	
+			 		'한국도로공사'		as TENANT_NM, 
+			 		D.hgbsmyeong	as DEPT_NM,
+			 		D.bscode		as DEPT_CODE,
+			 		regexp_replace(regexp_replace(D.hgbsmyeong, '\"', '', 'g'), '[<>&%]', ' ', 'g')  as ABBR_NM,
+			        D.jsswbscode	as DEPT_PARENT_CODE,
+			        null::varchar	as BRANCH_CODE,						-- 지점코드
+			      	DT.NAME_TREE || '‡' || D.hgbsmyeong as NAME_TREE,   -- 상위 NAME_TREE에 현재 부서 이름 추가
+			        DT.CODE_TREE || '‡' || D.bscode 	as CODE_TREE,   -- 상위 CODE_TREE에 현재 부서 코드 추가
+			        DT.LEVEL + 1 	as LEVEL                           	-- 레벨 증가
+			    FROM ESP_CORE.HR_PHABSCDM D
+			    INNER JOIN DeptTree DT ON D.jsswbscode = DT.DEPT_CODE
+			)
+			SELECT 
+				SITE, SITE_NM, TENANT, TENANT_NM, DEPT_NM, DEPT_CODE, DEPT_PARENT_CODE, ABBR_NM, BRANCH_CODE, NAME_TREE, CODE_TREE, LEVEL
+			FROM DeptTree
+			ORDER BY LEVEL, CODE_TREE
+		]]>
+	</GET_SOURCE_HR_DEPT>	
+	<GET_SOURCE_HR_GRADE>
+		<![CDATA[
+			SELECT 
+				'EX'			as SITE, 	
+			 	'한국도로공사'		as SITE_NM, 
+			 	'EX'			as TENANT, 	
+			 	'한국도로공사'		as TENANT_NM, 
+				jwmyeong 		as GRADE_NM,
+				jikwi 			as GRADE_CODE
+			FROM ESP_CORE.HR_PHAJWCDM
+		]]>
+	</GET_SOURCE_HR_GRADE>	
+	<GET_SOURCE_HR_POSITION>
+		<![CDATA[
+			SELECT 
+				'EX'			as SITE, 	
+			 	'한국도로공사'		as SITE_NM, 
+			 	'EX'			as TENANT, 	
+			 	'한국도로공사'		as TENANT_NM, 
+				jjmyeong 		as POSITION_NM,
+				jikjong 		as POSITION_CODE
+			FROM ESP_CORE.HR_PHAJJCDM
+		]]>
+	</GET_SOURCE_HR_POSITION>
+	<GET_SOURCE_HR_USER>
+		<![CDATA[
+			SELECT
+				HU.swbeonho 					as USER_NO,
+				HU.hgseongmyeong				as USER_NM,
+				'EX'							as SITE, 	
+			 	'한국도로공사'						as SITE_NM, 
+			 	'EX'							as TENANT, 	
+			 	'한국도로공사'						as TENANT_NM, 
+				HU.bscode  						as DEPT_CODE,
+				HU.jikwi 						as GRADE_CODE,
+				HU.jikjong						as POSITION_CODE,
+                get_user_state_cd_fn('work')	as USER_STATE_CODE,
+				regexp_replace(HU.psbeonho, 	'[^0-9]', '', 'g')	as DIRECT_NUMBER,
+				regexp_replace(HU.idjhbeonho, 	'[^0-9]', '', 'g') 	as MOBILE,
+				case 
+				when HU.ibjhbeonho LIKE '054-811%' then right(regexp_replace(HU.ibjhbeonho, '[^0-9]', '', 'g'), 4) 
+				else
+					regexp_replace(HU.snjhbeonho, 	'[^0-9]', '', 'g')
+				end as DN,
+				'Y' 							as MCID_FL,		
+				'Y'								as PIC_FL
+			FROM ESP_CORE.HR_PHAISJBM HU
+		]]>
+	</GET_SOURCE_HR_USER>
+		
+	<!-- 
+	******************************************************************	
+	*                                                                	
+	*                     이하 공통 처리 함수                            
+	*                                                                	
+	******************************************************************	
+	-->
+	<!--  SITE 처리	: SITE의 경우, 서버에 코드값이 존재하지 않음으로 이름으로 처리 -->
+	<MERGE_SITE>
+		<![CDATA[
+			WITH UPSERT AS
+			(
+				UPDATE 	ESP_CORE.U_SITE
+				SET   	VIEW_FL = 'Y'
+				WHERE 	SITE = #SITE#<STRING>
+				RETURNING *			
+			)
+			INSERT INTO ESP_CORE.U_SITE
+			(
+				ID,
+				SITE,
+				SITE_NM,
+				CTI_TYPE,
+				CTI_VER,
+				ERS_SCHEMA,
+				SITE_ORD,
+				VIEW_FL,
+				PSDUAL_FL,
+				SOLUTION_TYPE,
+				CTI_CONNSTR,
+				EMC_FL
+			)
+			SELECT
+				nextval('u_site_id_seq'::regclass) 	AS ID, 
+				#site#<string> 	  					AS SITE,
+				#site_nm#<string> 					AS SITE_NM,
+				null								AS CTI_TYPE,
+				null								AS CTI_VER,
+				null								AS ERS_SCHEMA,
+				(SELECT COALESCE(MAX(SITE_ORD), 0) + 1 FROM ESP_CORE.U_SITE) AS SITE_ORD,
+				'Y'									AS VIEW_FL,
+				null								AS PSDUAL_FL,
+				'ESP-u'								AS SOLUTION_TYPE,
+				null								AS CTI_CONNSTR,
+				'N'									AS EMC_FL
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+		]]>
+	</MERGE_SITE>	
+	<DISABLE_SITE>	<![CDATA[	UPDATE ESP_CORE.U_SITE SET VIEW_FL = 'N'		]]>	</DISABLE_SITE>	
+	
+	<!--  TENANT 처리	 : TENANT의 경우, 서버에 코드값이 존재하지 않음으로 이름으로 처리 -->
+	<MERGE_TENANT>
+		<![CDATA[
+			WITH UPSERT AS
+			(
+				UPDATE 	ESP_CORE.U_TENANT
+				SET   	VIEW_FL = 'Y'
+				WHERE SITE_ID = (SELECT US.ID FROM ESP_CORE.U_SITE US WHERE US.SITE = #site#<string>) AND TENANT = #tenant#<string>
+				RETURNING *			
+			)
+			INSERT INTO U_TENANT
+			(
+				ID,
+				SITE_ID,
+				TENANT, 
+				TENANT_NM, 
+				DESCRIPTION, 
+				TENANT_ORD, 
+				VIEW_FL
+			)
+			SELECT
+				nextval('u_tenant_id_seq'::regclass) AS ID, 
+				(SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #site#<string>) AS SITE_ID,
+				#tenant#<string>    	AS TENANT,
+				#tenant_nm#<string> 	AS TENANT_NM,
+				#tenant_nm#<string> 	AS DESCRIPTION,
+				(SELECT COALESCE(MAX(TENANT_ORD), 0) + 1 FROM ESP_CORE.U_TENANT) AS TENANT_ORD,
+				'Y' 					AS VIEW_FL
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+		]]>
+	</MERGE_TENANT>
+	<DISABLE_TENANT>	<![CDATA[	UPDATE ESP_CORE.U_TENANT SET VIEW_FL = 'N'		]]>	</DISABLE_TENANT>	
+
+	<!--	DEPT 처리	-->
+	<DISABLE_DEPT>		<![CDATA[	UPDATE ESP_CORE.U_DEPT SET USE_FL = 'N'			]]>	</DISABLE_DEPT>
+	<GET_CURRENT_DEPT>
+        <![CDATA[
+        	SELECT SITE_ID, SITE, SITE_NM, TENANT_ID, TENANT, TENANT_NM, DEPT_ID, DEPT_NM, BRANCH_CODE, DEPT_CODE, PARENT_ID, NAME_TREE, CODE_TREE, DEPTH FROM ESP_CORE.DEPT_V		
+        ]]>	
+    </GET_CURRENT_DEPT>
+   	<GET_DEPT>	<!-- DEPT_CODE: 사이트(기간계) 부서 코드 값 -->
+        <![CDATA[	
+        	SELECT SITE_ID, TENANT_ID, DEPT_ID, DEPT_NM, DEPT_CODE, PARENT_ID, CODE_TREE, BRANCH_CODE FROM ESP_CORE.DEPT_V WHERE SITE = #site#<string> AND TENANT = #tenant#<string> AND DEPT_CODE = #DEPT_CODE#<string>
+        ]]>
+    </GET_DEPT>		
+	<INSERT_DEPT>
+		<![CDATA[
+			INSERT INTO ESP_CORE.U_DEPT (ID, TENANT_ID, DEPT_NM,  DEPT_CODE, ABBR_NM, BRANCH_CODE, DEPT_ORD, PARENT_ID, USE_FL)
+			VALUES (
+				nextval('u_dept_id_seq'::regclass), 
+				( 
+					SELECT NT.ID FROM ESP_CORE.U_TENANT NT
+					INNER JOIN ESP_CORE.U_SITE NS ON NS.ID = NT.SITE_ID 
+					WHERE NS.SITE = #SITE#<STRING>  AND NT.TENANT = #TENANT#<STRING> 
+				),
+				#DEPT_NM#<STRING>,
+				#DEPT_CODE#<STRING>,
+				#ABBR_NM#<STRING>,
+                #BRANCH_CODE#<STRING>,
+				(SELECT COALESCE(MAX(DEPT_ORD), 0) + 1  FROM ESP_CORE.U_DEPT),
+				#PARENT_ID#<INT>,
+				'Y'
+			)
+		]]>
+	</INSERT_DEPT>
+	<UPDATE_DEPT>	<!--  BRANCH_CODE : 점코드, ABBR_NM은 갱신하지 않고, 웹에서 변경하도록함 -->
+		<![CDATA[
+			UPDATE ESP_CORE.U_DEPT SET 
+				USE_FL   	= 'Y',
+				DEPT_NM   	= #DEPT_NM#<STRING>,
+                BRANCH_CODE = #BRANCH_CODE#<STRING>,
+                PARENT_ID 	= #PARENT_ID#<INT>
+			WHERE TENANT_ID = (SELECT ID FROM ESP_CORE.U_TENANT UT  WHERE UT.SITE_ID = (SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #SITE#<STRING>) AND UT.TENANT  = #TENANT#<STRING>) AND DEPT_CODE = #DEPT_CODE#<STRING>
+		]]>
+	</UPDATE_DEPT>
+
+	<!--  GRADE 처리	-->
+	<MERGE_GRADE>
+		<![CDATA[
+			WITH UPSERT AS
+			(
+				UPDATE ESP_CORE.U_GRADE
+				SET USE_FL = 'Y', GRADE_NM = #grade_nm#<string>
+				WHERE
+					SITE_ID = ( SELECT ID FROM U_SITE WHERE SITE = #site#<string> ) AND GRADE_NM = #grade_nm#<string> AND GRADE_CODE = #grade_code#<string> 
+				RETURNING *			
+			)
+			INSERT INTO ESP_CORE.U_GRADE
+			(
+				ID,
+				GRADE_NM,
+				GRADE_ORD,
+				SITE_ID,
+				USE_FL,
+				GRADE_CODE
+			) 
+			SELECT
+				nextval('u_grade_id_seq'::regclass) AS ID,
+				#grade_nm#<string>	AS GRADE_NM,	
+				( 
+					SELECT COALESCE(MAX(GRADE_ORD), 0) + 1 FROM ESP_CORE.U_GRADE UG, ESP_CORE.U_SITE US WHERE 
+					UG.SITE_ID = US.ID AND US.ID = (SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #site#<string>)
+				) AS GRADE_ORD,
+				( SELECT ID FROM ESP_CORE.U_SITE   WHERE SITE = #site#<string> ) AS SITE_ID,
+				'Y' AS USE_FL,
+				#grade_code#<string> AS GRADE_CODE
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+		]]>
+	</MERGE_GRADE>
+	<DISABLE_GRADE>		<![CDATA[	UPDATE ESP_CORE.U_GRADE SET USE_FL = 'N'	]]> </DISABLE_GRADE>
+
+	<!--  POSITION 처리	-->
+	<MERGE_POSITION>
+		<![CDATA[
+			WITH UPSERT AS
+			(
+				UPDATE ESP_CORE.U_POSITION
+				SET USE_FL = 'Y', POSITION_NM = #POSITION_nm#<string>
+				WHERE
+					SITE_ID = ( SELECT ID FROM U_SITE WHERE SITE = #site#<string> ) AND POSITION_NM = #POSITION_nm#<string> AND POSITION_CODE = #POSITION_code#<string> 
+				RETURNING *			
+			)
+			INSERT INTO ESP_CORE.U_POSITION
+			(
+				ID,
+				POSITION_NM,
+				POSITION_ORD,
+				SITE_ID,
+				USE_FL,
+				POSITION_CODE
+			) 
+			SELECT
+				nextval('u_position_id_seq'::regclass) AS ID,
+				#POSITION_nm#<string>	AS POSITION_NM,	
+				( 
+					SELECT COALESCE(MAX(POSITION_ORD), 0) + 1 FROM ESP_CORE.U_POSITION UG, ESP_CORE.U_SITE US WHERE 
+					UG.SITE_ID = US.ID AND US.ID = (SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #site#<string>)
+				) AS POSITION_ORD,
+				( SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #site#<string> ) AS SITE_ID,
+				'Y' AS USE_FL,
+				#POSITION_code#<string> AS POSITION_CODE
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+		]]>
+	</MERGE_POSITION>
+	<DISABLE_POSITION>		<![CDATA[	UPDATE ESP_CORE.U_POSITION SET USE_FL = 'N'	]]> </DISABLE_POSITION>
+
+	<!--  USER(사용자 처리 관련 필드) -->
+	<MERGE_USER>
+		<![CDATA[
+			WITH UPSERT AS
+			(
+				UPDATE ESP_CORE.U_USER
+				SET 
+					USER_NM   		= #USER_NM#<STRING>,
+					SITE_ID   		= (SELECT ID FROM ESP_CORE.U_SITE WHERE SITE_NM = #SITE_NM#<STRING> AND VIEW_FL = 'Y'), 
+					TENANT_ID 		= (SELECT ID FROM ESP_CORE.U_TENANT WHERE SITE_ID = (SELECT ID FROM U_SITE WHERE SITE = #SITE#<STRING>) AND TENANT = #TENANT#<STRING> AND VIEW_FL = 'Y'),
+					DEPT_ID   		= (SELECT ID FROM ESP_CORE.U_DEPT WHERE DEPT_CODE = #DEPT_CODE#<STRING> AND USE_FL = 'Y'),
+					GRADE_ID		= (SELECT UG.ID FROM ESP_CORE.U_GRADE UG, U_SITE US WHERE UG.GRADE_CODE = #GRADE_CODE#<STRING> AND UG.USE_FL = 'Y' AND UG.SITE_ID = US.ID AND UG.SITE_ID = (SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #SITE#<STRING>)),
+		    		POSITION_ID		= (SELECT UP.ID FROM ESP_CORE.U_POSITION UP, U_SITE US WHERE UP.POSITION_CODE = #POSITION_CODE#<STRING> AND UP.USE_FL = 'Y' AND UP.SITE_ID = US.ID AND UP.SITE_ID = (SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #SITE#<STRING>)),
+		    		DN				= #DN#<STRING>,
+		    		MOBILE			= #MOBILE#<STRING>,
+                    DIRECT_NUMBER   = #DIRECT_NUMBER#<STRING>,
+					USE_FL			= 'Y',
+					USER_STATE_CD   = #USER_STATE_CODE#<INT>,
+                  	EDIT_ID			= 'SYSTEM',
+                    EDIT_DT			= CURRENT_TIMESTAMP
+                WHERE
+					USER_NO	= #USER_NO#<STRING>
+				RETURNING *			
+			)
+			INSERT INTO ESP_CORE.U_USER
+			(
+				ID,
+				USER_NO,
+				USER_NM,
+				GRADE_ID,
+				POSITION_ID,
+				SITE_ID,
+				TENANT_ID,
+				DEPT_ID,
+				DN,
+				MOBILE,
+                DIRECT_NUMBER,
+                USER_STATE_CD,
+				USE_FL,
+				REG_ID,
+				REG_DT
+			) 
+			SELECT 
+				nextval('u_user_id_seq'::regclass),	
+				#USER_NO#<STRING> AS USER_NO,
+				#USER_NM#<STRING> AS USER_NM,
+				(SELECT ID FROM ESP_CORE.U_GRADE WHERE GRADE_CODE = #GRADE_CODE#<STRING>) AS GRADE_ID,
+				(SELECT ID FROM ESP_CORE.U_POSITION WHERE POSITION_CODE = #POSITION_CODE#<STRING>) AS POSITION_ID,
+				(SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #SITE#<STRING>) AS SITE_ID,
+				(SELECT ID FROM ESP_CORE.U_TENANT WHERE TENANT = #TENANT#<STRING> AND SITE_ID = ( SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #SITE#<STRING>)) AS TENANT_ID,
+				(SELECT ID FROM ESP_CORE.U_DEPT WHERE DEPT_CODE = #DEPT_CODE#<STRING>) AS DEPT_ID,
+				#DN#<STRING> AS DN,
+				#MOBILE#<STRING> AS MOBILE,
+                #DIRECT_NUMBER#<STRING> AS DIRECT_NUMBER,
+                #USER_STATE_CODE#<INT> AS USER_STATE_CODE,
+                'Y'	 				 AS USE_FL,
+				'SYSTEM' 			 AS REG_ID,
+				CURRENT_TIMESTAMP 	 AS REG_DT
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )		
+		]]>
+	</MERGE_USER>
+	<DISABLE_USER>	<![CDATA[	UPDATE ESP_CORE.U_USER SET USE_FL = 'N'	]]>	</DISABLE_USER>
+	
+	<!-- Member 테이블 갱신 -->
+	<MERGE_MEMBER>
+		<![CDATA[
+			WITH UPSERT AS 
+			(
+				UPDATE ESP_CORE.U_MEMBER
+				SET 
+					USER_ID		=	(SELECT ID FROM U_USER WHERE USER_NO = #user_no#<string>),
+					DEPT_ID		=	(SELECT DEPT_ID FROM U_USER WHERE USER_NO = #user_no#<string>),
+					EDIT_ID		=	'SYSTEM',
+					EDIT_DT		=	CURRENT_TIMESTAMP
+				WHERE 
+					LOGIN_ID = #user_no#<string> 
+				RETURNING *
+			)
+			INSERT INTO ESP_CORE.U_MEMBER
+			(
+				ID,
+				LOGIN_ID,
+				LOGIN_NM,
+				LOGIN_PWD,
+				MEMBER_STATE_CD,
+				AUTH_ID,
+				USER_ID,
+				DEPT_ID,
+				REG_ID,
+				REG_DT
+			)
+			SELECT
+				nextval('u_member_id_seq'::regclass),	
+				#user_no#<string>,
+				#user_nm#<string>,
+				#user_pw#<string>,
+				GET_MEMBER_STATE_CD_FN('active'),
+				(SELECT ID FROM U_AUTH WHERE AUTH_NM LIKE '%일반사용자%' ORDER BY ID LIMIT 1),
+				(SELECT ID FROM U_USER WHERE USER_NO      = #user_no#<string>),
+				(SELECT DEPT_ID FROM U_USER WHERE USER_NO = #user_no#<string>),
+				'SYSTEM',
+				CURRENT_TIMESTAMP
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+		]]>
+	</MERGE_MEMBER>	
+
+	<!--  U_USER 테이블에서 삭제처리된 사용자에 대해서 계정 잠금 U_MEMBER 테이블의 MEMBER_STATE_CD의 상태를 DEL로 변경 -->
+	<DEL_MEMBER_STATE>	
+		<![CDATA[  
+			UPDATE ESP_CORE.U_MEMBER SET MEMBER_STATE_CD = GET_MEMBER_STATE_CD_FN('deleted')
+			WHERE LOGIN_ID  IN ( SELECT USER_NO FROM ESP_CORE.U_USER WHERE USE_FL = 'N')
+		]]>
+	</DEL_MEMBER_STATE>
+	
+	<!--  U_MEMBER 테이블을 이용해서 U_USER의 LOGIN_FL값 갱신 -->
+	<UPDATE_USER_LOGIN_FL>
+		<![CDATA[  
+			UPDATE ESP_CORE.U_USER SET LOGIN_FL = 'Y'
+			WHERE ID IN ( SELECT USER_ID FROM ESP_CORE.U_MEMBER WHERE USER_ID IS NOT NULL )
+		]]>
+	</UPDATE_USER_LOGIN_FL>
+	
+	<!--  ESP_UC 스키마의 서비스 정보 갱신	-->
+	<MERGE_USER_SERVICE>
+		<![CDATA[  
+			WITH UPSERT AS 
+			(
+				UPDATE ESP_UC.U_USER_SERVICE
+				SET 
+					USER_NO		=	(SELECT ID FROM U_USER WHERE USER_NO = #user_no#<string>),
+					EDIT_ID		=	'SYSTEM',
+					EDIT_DT		=	CURRENT_TIMESTAMP
+				WHERE 
+					USER_NO 	= #user_no#<string> 
+				RETURNING *
+			)
+			INSERT INTO ESP_UC.U_USER_SERVICE
+			(
+				ID,
+				USER_NO,
+				MCID_FL,
+				PIC_FL,
+				REG_ID,
+				REG_DT
+			)
+			SELECT
+				nextval('u_user_service_id_seq'::regclass),	
+				#user_no#<string>,
+				#mcid_fl#<string>,
+				#pic_fl#<string>,
+				'SYSTEM',
+				CURRENT_TIMESTAMP
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+	
+		]]>
+	</MERGE_USER_SERVICE>
+
+	<!-- Postgres의 경우 해당 코드가 소스에 존재하기 때문에 아래 INSERT_BATCH, UPDATE_BULK 항목은 불필요함 -->
+	<INSERT_BATCH>
+		<![CDATA[	
+			INSERT INTO E_BATCHWORK (ID, APP_URL, REQ_USER, STATUS, TITLE, DESCRIPTION, RESULT, CAUSE, YMD, REQ_DT) 
+			VALUES 
+			(
+				(SELECT COALESCE(MAX(ID), 0) + 1 FROM E_BATCHWORK),
+				#REQ_URL#<STRING>, #REQ_USER#<STRING>, #STATUS#<STRING>, #TITLE#<STRING>, #DESCRIPTION#<STRING>, #RESULT#<STRING>, #CAUSE#<STRING>,
+				CURRENT_DATE, CURRENT_TIMESTAMP
+			)
+		]]>
+	</INSERT_BATCH>
+	<UPDATE_BULK>
+		<![CDATA[	
+            INSERT INTO E_BULKWORK ( ID, TOKEN, APP_URL, REQ_URL, REQ_USER, REQ_DATA, STATUS, TITLE, DESCRIPTION, FILE_NM, RESULT, CAUSE, CMPLT_DT, REQ_DT) VALUES (
+                (SELECT COALESCE(MAX(ID), 0) + 1 FROM E_BULKWORK),
+                #TOKEN#<STRING>,
+                #REQ_URL#<STRING>,
+                #REQ_URL#<STRING>,
+                #REQ_USER#<STRING>,
+                #REQ_DATA#<STRING>,
+                #STATUS#<STRING>,
+                #TITLE#<STRING>,
+                #DESCRIPTION#<STRING>,
+                #FILE_NM#<STRING>,
+                #RESULT#<STRING>,
+                #CAUSE#<STRING>,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )
+            ON CONFLICT (TOKEN) DO UPDATE
+            SET
+                STATUS      = EXCLUDED.STATUS,
+                TITLE       = EXCLUDED.TITLE,
+                DESCRIPTION = EXCLUDED.DESCRIPTION,
+                FILE_NM     = EXCLUDED.FILE_NM,
+                RESULT      = EXCLUDED.RESULT,
+                CAUSE       = EXCLUDED.CAUSE,
+                CMPLT_DT    = EXCLUDED.CMPLT_DT
+		]]>
+	</UPDATE_BULK>
+	<!-- 
+	<UPDATE_BULK>
+		<![CDATA[	
+			UPDATE E_BULKWORK SET STATUS = 'COMPLETE', TITLE = #TITLE#<STRING>, DESCRIPTION = #DESCRIPTION#<STRING>, 
+			FILE_NM = #FILE_NM#<STRING>, RESULT = #RESULT#<STRING>, CAUSE = #CAUSE#<STRING>, CMPLT_DT = CURRENT_TIMESTAMP	
+			WHERE TOKEN = #TOKEN#<STRING>
+		]]>
+	</UPDATE_BULK>
+	-->	
+</sqlMap>

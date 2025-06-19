@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+<style type="text/css">
+	table.type11 {
+	  border-collapse: separate;
+	  border-spacing: 1px;
+	  text-align: left;
+	  line-height: 1.5;
+	  margin: 20px 10px;
+	}
+	table.type11 th {
+	  width: 155px;
+	  font-weight: bold;
+	  vertical-align: top;
+	  color: #fff;
+	  background: #ce4869 ;
+	  border-style:solid;
+	  border-width:0px;
+	  font-family:Arial, sans-serif;
+	  padding:5px 5px;word-break:normal;
+	}
+	table.type11 td {
+	  width: 155px;	  
+	  vertical-align: top;
+	  border-bottom: 1px solid #ccc;
+	  background: #eee;
+	  border-style:solid;
+	  border-width:0px;
+	  font-family:Arial, sans-serif;
+	  padding:5px 5px;word-break:normal;
+	}
+</style>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KB알림쪽지</title>
+</head>
+<body>
+<table class="type11">
+	<thead>
+		<tr>
+	    	<th colspan="4">
+	    		IP
+	    		<input type="radio" name="serverIP" value="127.0.0.1"  checked="checked">127.0.0.1
+				<input type="radio" name="serverIP" value="127.0.0.1">127.0.0.1
+		    </th>
+		    <th colspan="2">
+		    	PORT
+		    	<input type="text" id="serverPort" value="3106">
+		    </th>
+		    <th colspan="1">
+		    	<select name="REST" id="REST">
+					<option value="http" selected="selected">HTTP</option>
+					<option value="https">HTTPS</option>
+				</select>
+		    </th>
+		    <th colspan="1">
+		    	<select name="TIMEOUT" id="TIMEOUT">
+					<option value="3000" selected="selected">3000</option>
+					<option value="5000">5000</option>
+					<option value="10000">10000</option>
+				</select>
+			</th>
+		    <th colspan="4" align="center">
+		    	#QUERY_FILE#
+		    </th>
+		    <th colspan="2" align="center">
+		    	LOGIN_ID
+		    	<select name="LOGIN_ID" id="LOGIN_ID">
+					<option value="ecstel">ecstel</option>
+					<option value="SI24028" selected="selected">SI24028</option>
+				</select>
+		    </th>
+		</tr>
+	</thead>
+  	<tbody>
+  		<tr>
+  			<td colspan="2">
+  				쪽지시스템 확인
+			</td>
+			<td colspan="4">
+				<a href="https://dev-workb.kbfgone.com" target="_blank">테스트계 쪽지시스템</a>
+			</td>
+			<td colspan="6"></td>
+		</tr>
+  		<!-- 승인요청 -->
+  		<tr>
+		 	<td colspan="2">URL    <input type="text"     id="URL1"      value="/v3/ecs/talk/alert" size="20"></td>
+			<td colspan="1">
+				<select name="METHOD1" id="METHOD1">
+					<option value="POST" selected="selected">POST</option>
+				</select>
+		 	</td>
+	    	<td colspan="1">       <input type="button"   id="BTN1" 	 value="전송" size="5"></td>
+	    	<td colspan="1">
+	    		<select name="SITE1" id="SITE1">
+			  		<option value="KBSC" selected="selected">KBSC(KB증권)</option>
+			  		<option value="DEMO"> 데모</option>
+			  	</select>	
+	    	</td>
+	    	<td colspan="2">JOBID     <input type="text"   id="unique-key1"   	value=""></td>
+	    	<td colspan="2">SENDER    <input type="text"   id="SENDER1"    		value="SI24029"></td>
+	    	<td colspan="2">RECVER    <input type="text"   id="RECEIVER1"    	value="SI24028"></td>
+	    	<td colspan="3"></td>
+		</tr>
+		<tr>
+	    	<td colspan="4"></td>
+			<td colspan="2">제목			<input type="text"   id="TITLE1" 	    value="전화관리 승인 요청"></td>
+	    	<td colspan="5"></td>
+	    	<td colspan="3"></td>
+		</tr>
+		<tr>
+			<td colspan="4"></td>
+			<td colspan="9">
+			    <textarea id="CONTENT1" rows="5" style="width: 100%; text-align: left; font-size: 16px;">
+전화 신청과 관련된 승인 요청이 접수되었습니다.</br>
+<a href="https://127.0.0.1/euc/phone/approval/request?requestId=1&loginId=6f474152664f54705259486a4a78565568776d316f773d3d">전화관리시스템 바로가기</a>
+</textarea>
+			</td>
+			<td colspan="1"></td>
+		</tr>
+		
+		<!--  작업요청 -->
+ 		<tr>
+		 	<td colspan="2">URL    <input type="text"     id="URL2"      value="/v3/ecs/talk/alert" size="20"></td>
+			<td colspan="1">
+				<select name="METHOD2" id="METHOD2">
+					<option value="POST" selected="selected">POST</option>
+				</select>
+		 	</td>
+	    	<td colspan="1">       <input type="button"   id="BTN2" 	 value="전송" size="5"></td>
+	    	<td colspan="1">
+	    		<select name="SITE2" id="SITE2">
+			  		<option value="KBSC" selected="selected">KBSC(KB증권)</option>
+			  		<option value="DEMO"> 데모</option>
+			  	</select>	
+	    	</td>
+	    	<td colspan="2">JOBID     <input type="text"   id="unique-key2"   	value=""></td>
+	    	<td colspan="2">SENDER    <input type="text"   id="SENDER2"    		value="SI24029"></td>
+	    	<td colspan="2">RECVER    <input type="text"   id="RECEIVER2"    	value="SI24028"></td>
+	    	<td colspan="3"></td>
+		</tr>
+		<tr>
+	    	<td colspan="4"></td>
+			<td colspan="2">제목			<input type="text"   id="TITLE2" 	    value="전화관리 작업 요청"></td>
+	    	<td colspan="5"></td>
+	    	<td colspan="3"></td>
+		</tr>
+		<tr>
+			<td colspan="4"></td>
+			<td colspan="9">
+			    <textarea id="CONTENT2" rows="5" style="width: 100%; text-align: left; font-size: 16px;">
+전화 신청과 관련된 작업 요청이 접수되었습니다.<br>
+<a href="https://127.0.0.1/euc/phone/approval/request?requestId=1&loginId=6f474152664f54705259486a4a78565568776d316f773d3d">전화관리시스템 바로가기</a>
+</textarea> 
+			</td>
+			<td colspan="1"></td>
+		</tr>		
+		
+		<!--  작업완료 -->
+ 		<tr>
+		 	<td colspan="2">URL    <input type="text"     id="URL3"      value="/v3/ecs/talk/alert" size="20"></td>
+			<td colspan="1">
+				<select name="METHOD3" id="METHOD3">
+					<option value="POST" selected="selected">POST</option>
+				</select>
+		 	</td>
+	    	<td colspan="1">       <input type="button"   id="BTN3" 	 value="전송" size="5"></td>
+	    	<td colspan="1">
+	    		<select name="SITE3" id="SITE3">
+			  		<option value="KBSC" selected="selected">KBSC(KB증권)</option>
+			  		<option value="DEMO"> 데모</option>
+			  	</select>	
+	    	</td>
+	    	<td colspan="2">JOBID     <input type="text"   id="unique-key3"   	value=""></td>
+	    	<td colspan="2">SENDER    <input type="text"   id="SENDER3"    		value="SI24029"></td>
+	    	<td colspan="2">RECVER    <input type="text"   id="RECEIVER3"    	value="SI24028"></td>
+	    	<td colspan="3"></td>
+		</tr>
+		<tr>
+	    	<td colspan="4"></td>
+			<td colspan="2">제목			<input type="text"   id="TITLE3" 	    value="전화관리 작업 완료"></td>
+	    	<td colspan="5"></td>
+	    	<td colspan="3"></td>
+		</tr>
+		<tr>
+			<td colspan="4"></td>
+			<td colspan="9">
+			    <textarea id="CONTENT3" rows="5" style="width: 100%; text-align: left; font-size: 16px;">
+전화 신청과 관련된 작업이 완료되었습니다.<br>
+4521 내선번호를 사용하시면 됩니다.<br>
+문의전화) 0114<br>				
+<a href="https://127.0.0.1/euc/phone/approval/request?requestId=1&loginId=6f474152664f54705259486a4a78565568776d316f773d3d">전화관리시스템 바로가기</a>
+</textarea> 
+			</td>
+			<td colspan="1"></td>
+		</tr>		
+		
+		<tr>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		    <td></td>
+		</tr>
+		<tr bgcolor=#E4E6EA>
+			<td class="tg-0lax" colspan=7>요청<textarea id ="reqValue" style="width:100%;height:500px;" ></textarea></td>
+			<td class="tg-0lax" colspan=7>응답<textarea id ="rtnValue" style="width:100%;height:500px;" ></textarea></td>
+		</tr>
+  </tbody>
+</table>
+</body>
+<script src="./include/unique.js"></script>
+<script src="./include/jquery-3.2.1.js"></script>
+<script src="./include/script.js"></script>
+<script>
+	//	더블클릭 제거					
+	$('#CONTENT1').dblclick(function()   { $(this).val(''); });
+</script>
+<script>	
+	$( document ).ready(function() {
+		$("#BTN1").click(function(e) {
+			$("#rtnValue").empty();
+			$("#reqValue").empty();
+
+			var url 	 = $('#URL1').val();
+			var jsonData = "";
+			if($('#METHOD1').val() == 'POST') {
+				var valuePost   		= new Object();
+				valuePost.SITE    		= $('#SITE1').val();
+				valuePost.JOBID			= $('#unique-key1').val();	
+				valuePost.SENDER		= $('#SENDER1').val();	
+				valuePost.RECEIVER		= $('#RECEIVER1').val();	
+				valuePost.TITLE			= $('#TITLE1').val();	
+				valuePost.CONTENT		= $('#CONTENT1').val();			
+				
+				jsonData  = JSON.stringify(valuePost);	
+				var jsonData1 = JSON.parse(JSON.stringify(valuePost));
+				getReqValue();
+				$("#reqValue").append(document.createTextNode($('#METHOD1').val()));
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));	
+				$("#reqValue").append(document.createTextNode("\n"));	
+				$("#reqValue").append(document.createTextNode(JSON.stringify(jsonData1, null, 4)));		
+				alert($('#METHOD1').val() + " " + jsonData);
+			}
+			$.ajax({    
+				url: $('#REST').val()+'://'+$("input[name='serverIP']:checked").val()+':'+$('#serverPort').val()+ url,
+				type: $('#METHOD1').val(),
+				data: jsonData,
+				timeout: $('#TIMEOUT').val(), // 타임아웃 설정 (3초)
+				contentType: 'application/json',
+				success: function(data) {
+					if( data ) {
+						var jsonData =  JSON.parse(data);
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+					} else {
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode( "200 OK "));
+					}					
+				}, 
+				error : function(request, status, error ) {  
+					var jsonData =  JSON.parse(request.responseText);
+					$("#rtnValue").empty();
+					getRtnValue();
+					$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));						
+				}
+			})
+		});
+	});
+
+	$( document ).ready(function() {
+		$("#BTN2").click(function(e) {
+			$("#rtnValue").empty();
+			$("#reqValue").empty();
+
+			var url 	 = $('#URL2').val();
+			var jsonData = "";
+			if($('#METHOD2').val() == 'POST') {
+				var valuePost   		= new Object();
+				valuePost.SITE    		= $('#SITE2').val();
+				valuePost.JOBID			= $('#unique-key2').val();	
+				valuePost.SENDER		= $('#SENDER2').val();	
+				valuePost.RECEIVER		= $('#RECEIVER2').val();	
+				valuePost.TITLE			= $('#TITLE2').val();	
+				valuePost.CONTENT		= $('#CONTENT2').val();			
+				
+				jsonData  = JSON.stringify(valuePost);	
+				var jsonData1 = JSON.parse(JSON.stringify(valuePost));
+				getReqValue();
+				$("#reqValue").append(document.createTextNode($('#METHOD2').val()));
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));	
+				$("#reqValue").append(document.createTextNode("\n"));	
+				$("#reqValue").append(document.createTextNode(JSON.stringify(jsonData1, null, 4)));		
+				alert($('#METHOD2').val() + " " + jsonData);
+			}
+			$.ajax({    
+				url: $('#REST').val()+'://'+$("input[name='serverIP']:checked").val()+':'+$('#serverPort').val()+ url,
+				type: $('#METHOD2').val(),
+				data: jsonData,
+				timeout: $('#TIMEOUT').val(), // 타임아웃 설정 (3초)
+				contentType: 'application/json',
+				success: function(data) {
+					if( data ) {
+						var jsonData =  JSON.parse(data);
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+					} else {
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode( "200 OK "));
+					}					
+				}, 
+				error : function(request, status, error ) {  
+					var jsonData =  JSON.parse(request.responseText);
+					$("#rtnValue").empty();
+					getRtnValue();
+					$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));						
+				}
+			})
+		});
+	});
+	
+	$( document ).ready(function() {
+		$("#BTN3").click(function(e) {
+			$("#rtnValue").empty();
+			$("#reqValue").empty();
+
+			var url 	 = $('#URL3').val();
+			var jsonData = "";
+			if($('#METHOD3').val() == 'POST') {
+				var valuePost   		= new Object();
+				valuePost.SITE    		= $('#SITE3').val();
+				valuePost.JOBID			= $('#unique-key3').val();	
+				valuePost.SENDER		= $('#SENDER3').val();	
+				valuePost.RECEIVER		= $('#RECEIVER3').val();	
+				valuePost.TITLE			= $('#TITLE3').val();	
+				valuePost.CONTENT		= $('#CONTENT3').val();			
+				
+				jsonData  = JSON.stringify(valuePost);	
+				var jsonData1 = JSON.parse(JSON.stringify(valuePost));
+				getReqValue();
+				$("#reqValue").append(document.createTextNode($('#METHOD3').val()));
+				$("#reqValue").append(document.createTextNode("\n"));					
+				$("#reqValue").append(document.createTextNode(url));	
+				$("#reqValue").append(document.createTextNode("\n"));	
+				$("#reqValue").append(document.createTextNode(JSON.stringify(jsonData1, null, 4)));		
+				alert($('#METHOD3').val() + " " + jsonData);
+			}
+			$.ajax({    
+				url: $('#REST').val()+'://'+$("input[name='serverIP']:checked").val()+':'+$('#serverPort').val()+ url,
+				type: $('#METHOD3').val(),
+				data: jsonData,
+				timeout: $('#TIMEOUT').val(), // 타임아웃 설정 (3초)
+				contentType: 'application/json',
+				success: function(data) {
+					if( data ) {
+						var jsonData =  JSON.parse(data);
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));
+					} else {
+						$("#rtnValue").empty();
+						getRtnValue();
+						$("#rtnValue").append(document.createTextNode( "200 OK "));
+					}					
+				}, 
+				error : function(request, status, error ) {  
+					var jsonData =  JSON.parse(request.responseText);
+					$("#rtnValue").empty();
+					getRtnValue();
+					$("#rtnValue").append(document.createTextNode(JSON.stringify(jsonData, null, 4)));						
+				}
+			})
+		});
+	});
+</script>
+</html>

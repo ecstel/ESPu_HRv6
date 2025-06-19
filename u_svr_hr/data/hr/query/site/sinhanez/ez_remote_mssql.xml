@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+	<DATABASE>mssql</DATABASE>
+	<URL>jdbc:sqlserver://%s:%d;DatabaseName=%s;encrypt=false;trustServerCertificate=false</URL>
+   	<HOSTNAME>10.0.55.114</HOSTNAME>
+	<DBNAME>sinhanezdb</DBNAME>
+   	<DBUSER>sa</DBUSER>
+   	<DBPASSWORD>Zt+d3lC/P8z0uwxKPtIweg==</DBPASSWORD>
+	<DBPORT>1433</DBPORT>
+
+	<!-- 2번에 대한 예시
+	*********************************************************************** 
+	 * 1. GET_SOURCE_[사이트명] : 하나의 질의문을 통해서 원격지 DB 질의
+	 *    직위,직책은 없을 수 있고(LEFT JOIN) 부서는 모두 존재함(INNER JOIN)
+     * 2. GET_SOURCE_[DEPT/GRADE/POSITION/USER] : 다수의 질의문을 통해서 원격지 DB 질의                       
+	 * 3. 아무것도 없는 경우 : 파일을 통한 DB 동기화시 자동 처리 
+	 *********************************************************************** 
+	-->
+	<GET_SOURCE_DEPT>
+		<![CDATA[
+			WITH DeptTree AS (
+			    SELECT
+			        D.org_nm        AS DEPT_NM,
+			        D.org_cd        AS DEPT_CODE,
+			        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(D.org_nm, '"', ''), '<', ' '), '>', ' '), '&', ' '), '%', ' ') AS ABBR_NM,
+			        CAST(NULL AS NVARCHAR(50))       AS DEPT_PARENT_CODE,
+			        CAST(NULL AS NVARCHAR(50))       AS BRANCH_CODE,
+			       	CAST(D.org_nm AS NVARCHAR(4000)) AS NAME_TREE,
+					CAST(D.org_cd AS NVARCHAR(4000)) AS CODE_TREE
+			    FROM v_org_info D
+			    WHERE D.com_cd = 'EZ' AND D.org_upper_cd IS NULL OR D.org_upper_cd = '' OR D.org_upper_cd = 'D1234567'
+			    UNION ALL
+			    SELECT
+			        D.org_nm,
+			        D.org_cd,
+			        REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(D.org_nm, '"', ''), '<', ' '), '>', ' '), '&', ' '), '%', ' ') AS ABBR_NM,
+			        CAST(D.org_upper_cd AS NVARCHAR(50))     AS DEPT_PARENT_CODE,
+			        CAST(NULL AS NVARCHAR(50))               AS BRANCH_CODE,
+			        CAST(DT.NAME_TREE + N'‡' + D.org_nm  AS NVARCHAR(4000)) AS NAME_TREE,
+			        CAST(DT.CODE_TREE + N'‡' + D.org_cd  AS NVARCHAR(4000)) AS CODE_TREE
+			    FROM v_org_info D 
+			    INNER JOIN DeptTree DT ON D.org_upper_cd = DT.DEPT_CODE
+			    WHERE D.com_cd = 'EZ'
+			)
+			SELECT
+			    'EZ'               	AS SITE,
+			    '신한Ez손해보험'     	AS SITE_NM,
+			    'EZ'              	AS TENANT,
+			    '신한Ez손해보험'     	AS TENANT_NM,
+			    DEPT_NM,
+			    DEPT_CODE,
+			    DEPT_PARENT_CODE,
+			    ABBR_NM,
+			    BRANCH_CODE,
+			    NAME_TREE,
+			    CODE_TREE
+			FROM DeptTree
+			ORDER BY CODE_TREE
+		]]>
+	</GET_SOURCE_DEPT>
+	<GET_SOURCE_GRADE>
+		<![CDATA[
+			SELECT 
+			    'EZ'               	AS SITE,
+			    '신한Ez손해보험'     	AS SITE_NM,
+			    'EZ'              	AS TENANT,
+			    '신한Ez손해보험'     	AS TENANT_NM,
+				emp_position_nm 	AS GRADE_NM,
+				emp_position_cd 	AS GRADE_CODE
+			FROM v_user_info where com_cd = 'EZ' group by emp_position_nm, emp_position_cd 
+		]]>
+	</GET_SOURCE_GRADE>
+	<GET_SOURCE_USER>
+		<![CDATA[
+			SELECT
+				HU.emp_no 			AS USER_NO,
+				HU.emp_nm			AS USER_NM,
+				 'EZ'               AS SITE,
+			    '신한Ez손해보험'     	AS SITE_NM,
+			    'EZ'              	AS TENANT,
+			    '신한Ez손해보험'     	AS TENANT_NM,
+				HU.org_cd  			AS DEPT_CODE,
+				HU.emp_position_cd 	AS GRADE_CODE,
+				''					AS POSITION_CODE,
+				''					AS DIRECT_NUMBER,
+				''					AS MOBILE,
+				HU.tel_no           AS DN
+			FROM v_user_info HU
+		]]>
+	</GET_SOURCE_USER>
+</sqlMap>

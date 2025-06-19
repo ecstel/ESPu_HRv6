@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+
+	<!--
+		<URL>jdbc:sqlserver://128.16.248.237:1433;DatabaseName=INSA_DIST;encrypt=false;trustServerCertificate=false</URL>
+	-->
+	<URL>jdbc:sqlserver://%s:%d;DatabaseName=%s;encrypt=false;trustServerCertificate=false</URL>
+	<HOSTNAME>10.0.55.114</HOSTNAME>
+	<DATABASE>mssql</DATABASE>
+	<DBNAME>kbipt</DBNAME>
+	<DBUSER>SA</DBUSER>
+	<DBPASSWORD>Zt+d3lC/P8z0uwxKPtIweg==</DBPASSWORD>
+	<DBPORT>1433</DBPORT>
+
+	<!--
+	<URL></URL>
+	<DATABASE>oracle</DATABASE>
+	<HOSTNAME>10.0.55.114</HOSTNAME>
+	<DBNAME>ecsdb</DBNAME>
+	<DBUSER>esp</DBUSER>
+	<DBPASSWORD>RpEqTVZ6o+p2lP0cEO2T2w==</DBPASSWORD>
+	<DBPORT>1521</DBPORT>
+	-->
+
+	<!-- 2번에 대한 예시
+	*********************************************************************** 
+	 * 1. GET_SOURCE_[사이트명] : 하나의 질의문을 통해서 원격지 DB 질의
+	 *    직위,직책은 없을 수 있고(LEFT JOIN) 부서는 모두 존재함(INNER JOIN)
+     * 2. GET_SOURCE_[DEPT/GRADE/POSITION/USER] : 다수의 질의문을 통해서 원격지 DB 질의                       
+	 * 3. 아무것도 없는 경우 : 파일을 통한 DB 동기화시 자동 처리 
+	 *********************************************************************** 
+	-->
+	<GET_SOURCE_DEPT>
+		<![CDATA[
+			WITH DeptTree AS (
+				-- 앵커 부분: 최상위 부서(부모 코드가 '000'인 행)
+				SELECT
+					D.DEPT_NAME                                                     	AS DEPT_NM,
+					D.DEPT_CODE                                                     	AS DEPT_CODE,
+					D.DEPT_NAME 														AS ABBR_NM,
+					CAST(NULL AS NVARCHAR(MAX))                                       	AS DEPT_PARENT_CODE,
+					CAST(NULL AS NVARCHAR(MAX))                                       	AS BRANCH_CODE,
+					-- NAME_TREE와 CODE_TREE를 NVARCHAR(MAX)로 캐스트
+					CAST(D.DEPT_NAME AS NVARCHAR(MAX))                                	AS NAME_TREE,
+					CAST(D.DEPT_CODE AS NVARCHAR(MAX))                                	AS CODE_TREE
+				FROM V_IF_ADM_DEPT D
+				WHERE D.DEPT_DVSN_CODE = '000'
+				UNION ALL
+				-- 재귀 부분: 하위 부서(부모 코드가 있는 행)
+				SELECT
+					D.DEPT_NAME                                                      	AS DEPT_NM,
+					D.DEPT_CODE                                                      	AS DEPT_CODE,
+					D.DEPT_NAME 														AS ABBR_NM,
+					CAST(D.DEPT_DVSN_CODE AS NVARCHAR(MAX))                            	AS DEPT_PARENT_CODE,
+					CAST(NULL AS NVARCHAR(MAX))                                        	AS BRANCH_CODE,
+					-- 앵커와 동일하게 NVARCHAR(MAX)인 NAME_TREE에 '‡'와 현재 부서명을 붙임
+					DT.NAME_TREE + N'‡' + D.DEPT_NAME                                   AS NAME_TREE,
+					-- CODE_TREE도 NVARCHAR(MAX)로 이어붙임
+					DT.CODE_TREE + N'‡' + D.DEPT_CODE                                   AS CODE_TREE
+				FROM V_IF_ADM_DEPT D
+				INNER JOIN DeptTree DT ON D.DEPT_DVSN_CODE = DT.DEPT_CODE
+			)
+			SELECT
+				'SHBK'              AS SITE,
+				'수협은행'			AS SITE_NM,
+				'SHBK'              AS TENANT,
+				'수협은행'			AS TENANT_NM,
+				DEPT_NM,
+				DEPT_CODE,
+				DEPT_PARENT_CODE,
+				-- ABBR_NM: 따옴표(") 제거하고 <, >, &, %를 공백으로 치환
+				REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(ABBR_NM, '"', ''), '<', ' '), '>', ' '), '&', ' '), '%', ' ') AS ABBR_NM,
+				BRANCH_CODE,
+				NAME_TREE,
+				CODE_TREE
+			FROM DeptTree
+			ORDER BY CODE_TREE
+		]]>
+	</GET_SOURCE_DEPT>
+	<GET_SOURCE_GRADE>
+		<![CDATA[
+			SELECT
+				'SHBK'              AS SITE,
+				'수협은행'			AS SITE_NM,
+				'SHBK'              AS TENANT,
+				'수협은행'			AS TENANT_NM,
+				G.POSITION_CODE     AS GRADE_CODE,
+				G.POSITION_NAME   	AS GRADE_NM
+			FROM V_IF_ADM_POSITION G
+		]]>
+	</GET_SOURCE_GRADE>
+	<!--
+	<GET_SOURCE_POSITION>
+		<![CDATA[
+			SELECT 
+				'EX'			as SITE, 	
+			 	'한국도로공사'		as SITE_NM, 
+			 	'EX'			as TENANT, 	
+			 	'한국도로공사'		as TENANT_NM, 
+				jjmyeong 		as POSITION_NM,
+				jikjong 		as POSITION_CODE
+			FROM HR_PHAJJCDM
+		]]>
+	</GET_SOURCE_POSITION>
+	-->
+	<GET_SOURCE_USER>
+		<![CDATA[
+			SELECT
+				HU.USER_ID           	AS USER_NO,
+				HU.USER_NAME           	AS USER_NM,
+				'SHBK'              	AS SITE,
+				'수협은행'				AS SITE_NM,
+				'SHBK'              	AS TENANT,
+				'수협은행'				AS TENANT_NM,
+				HU.DEPT_CODE        	AS DEPT_CODE,
+				HU.POSITION_CODE     	AS GRADE_CODE,
+				NULL                    AS POSITION_CODE,
+				REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(HU.USER_HOTLINE, '-', ''), ' ', ''), '(', ''), ')', ''), '.', '') AS DIRECT_NUMBER,
+				REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(HU.USER_MOBILE, '-', ''), ' ', ''), '(', ''), ')', ''), '.', '') AS MOBILE,
+				REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(HU.USER_TEL, '-', ''), ' ', ''), '(', ''), ')', ''), '.', '')  AS DN
+			FROM V_IF_ADM_USER HU
+		]]>
+	</GET_SOURCE_USER>
+</sqlMap>

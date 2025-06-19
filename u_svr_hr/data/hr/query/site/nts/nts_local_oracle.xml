@@ -1,0 +1,619 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+	<URL></URL>
+	<DATABASE>oracle</DATABASE>
+   	<HOSTNAME>10.80.100.118</HOSTNAME>
+	<DBNAME>ecsdb</DBNAME>
+   	<DBUSER>avdn</DBUSER>
+   	<DBPASSWORD>Zt+d3lC/P8z0uwxKPtIweg==</DBPASSWORD>
+	<DBPORT>1521</DBPORT>
+
+ 	<!--  원격지 DB 조회 후, 로컬 DB에 Insert 처리시 사용 -->
+	<INSERT_HR_NTS>
+		<![CDATA[
+			INSERT INTO HR_NTS (USER_NO, USER_NM, GRADE_NM, SITE_NM, TENANT_NM, IBG_NM, AGTTEAM_NM, DISPLAY, STAT, INFOPUSH, WORK, UPDATETIME) VALUES 
+			(
+				#USER_NO#<STRING>, #USER_NM#<STRING>, #GRADE_NM#<STRING>, #SITE_NM#<STRING>,
+				#TENANT_NM#<STRING>, #IBG_NM#<STRING>, #AGTTEAM_NM#<STRING>, #DISPLAY#<STRING>, #STAT#<STRING>, #INFOPUSH#<STRING>, #WORK#<STRING>, TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD') 
+			)
+		]]>
+	</INSERT_HR_NTS>
+	
+	<!-- 로컬 DB를 읽어서 처리를 위한 시작 -->
+	<GET_SOURCE_HR_DEPT>
+		<![CDATA[
+			SELECT 
+				SITE_NM 	AS SITE, 		SITE_NM		AS SITE_NM, 
+				TENANT_NM 	AS TENANT, 		TENANT_NM 	AS TENANT_NM,
+				IBG_NM 		AS DIVISION, 	IBG_NM		AS DIVISION_NM,
+				AGTTEAM_NM	AS TEAM,		AGTTEAM_NM  AS TEAM_NM
+			FROM HR_NTS  GROUP BY SITE_NM, TENANT_NM, IBG_NM, AGTTEAM_NM ORDER BY SITE_NM, TENANT_NM, IBG_NM, AGTTEAM_NM
+		]]>
+	</GET_SOURCE_HR_DEPT>	
+	<GET_SOURCE_HR_USER>
+		<![CDATA[
+			SELECT 
+				USER_NO 		AS	USER_NO,
+				GRADE_NM 		AS	GRADE_NM,
+				USER_NO			AS  DN,
+				SITE_NM			AS 	SITE,
+				SITE_NM			AS 	SITE_NM,
+				TENANT_NM 		AS  TENANT, 		
+				TENANT_NM 		AS  TENANT_NM,
+				IBG_NM 			AS  DIVISION, 	
+				IBG_NM			AS  DIVISION_NM,
+				AGTTEAM_NM		AS  TEAM,		
+				AGTTEAM_NM  	AS  TEAM_NM
+			FROM HR_NTS
+		]]>
+	</GET_SOURCE_HR_USER>
+	
+	<!-- 
+	<GET_SOURCE_HR_GRADE>
+		<![CDATA[
+			SELECT SITE, SITE_NM, TENANT, TENANT_NM, GRADE_NM FROM HR_EX GROUP BY SITE, SITE_NM, TENANT, TENANT_NM, GRADE_NM
+		]]>
+	</GET_SOURCE_HR_GRADE>	
+	<GET_SOURCE_HR_POSITION>
+		<![CDATA[
+			SELECT SITE, SITE_NM, TENANT, TENANT_NM, POSITION_NM FROM HR_EX GROUP BY SITE, SITE_NM, TENANT, TENANT_NM, POSITION_NM
+		]]>
+	</GET_SOURCE_HR_POSITION>	
+	-->
+
+	<!-- 
+	******************************************************************	
+	*                                                                	
+	*                     이하 공통 처리 함수                            
+	*                                                                	
+	******************************************************************	
+	-->
+	<!--  SITE 처리	: SITE의 경우, 서버에 코드값이 존재하지 않음으로 이름으로 처리 -->
+	<MERGE_SITE>
+		<![CDATA[
+			MERGE INTO U_SITEINFO TGT
+			USING 
+			(
+				SELECT
+					(SELECT NVL(MAX(SITEID)+1, 1) FROM U_SITEINFO) AS SITEID,
+					(SELECT NVL(MAX(TO_NUMBER(SITE))+2, 2) FROM U_SITEINFO) AS SITE,
+					#SITE_NM#<string> AS NAME,
+					(SELECT NVL(MAX(SORT)+1, 1) FROM U_SITEINFO) AS SORT,
+					'1' AS VIEWCHECK
+				FROM DUAL
+			) SRC
+			ON ( TGT.NAME = SRC.NAME )
+			WHEN MATCHED THEN
+			UPDATE
+				SET VIEWCHECK = SRC.VIEWCHECK
+			WHEN NOT MATCHED THEN
+			INSERT (
+				SITEID, SITE, NAME, SORT, VIEWCHECK
+			)
+			VALUES 
+			(
+				SRC.SITEID, SRC.SITE, SRC.NAME, SRC.SORT, SRC.VIEWCHECK
+			)
+		]]>
+	</MERGE_SITE>	
+	<DISABLE_SITE>	<![CDATA[	UPDATE U_SITEINFO SET VIEWCHECK = '0'		]]>	</DISABLE_SITE>	
+	
+	<!--  TENANT 처리	 : TENANT의 경우, 서버에 코드값이 존재하지 않음으로 이름으로 처리 -->
+	<MERGE_TENANT>
+		<![CDATA[
+			MERGE INTO U_TENANTINFO TGT
+			USING
+			(
+				SELECT
+					(SELECT NVL(MAX(TENANTID)+1, 1) FROM U_TENANTINFO)				AS TENANTID,
+					(SELECT NVL(MAX(TO_NUMBER(TENANT))+2, 2)   FROM U_TENANTINFO)	AS TENANT,
+					#TENANT_NM#<string>												AS TENANTNAME,
+					(SELECT SITE FROM U_SITEINFO WHERE NAME = #SITE_NM#<string>)	AS SITE,
+					(
+						CASE
+              			WHEN #SITE_NM#<string> LIKE '%지방국세청'	THEN '청'
+              			ELSE
+              				''
+              			END
+					)	AS GUBUN,
+					(SELECT NVL(MAX(SORT)+1, 1) FROM U_TENANTINFO) 	AS SORT,
+					#SITE_NM#<string> || '>' || #TENANT_NM#<string> AS DESCRIPTION, 
+					'Y'	AS USE,
+					'1' AS VIEWCHECK
+				FROM DUAL
+			) SRC
+			ON (
+				TGT.SITE = SRC.SITE AND TGT.TENANTNAME = SRC.TENANTNAME
+			)
+			WHEN MATCHED THEN
+			UPDATE
+			SET
+				VIEWCHECK 	= SRC.VIEWCHECK,
+				GUBUN 		= SRC.GUBUN
+			WHEN NOT MATCHED THEN
+			INSERT (
+				TENANTID, TENANT, TENANTNAME, SITE, GUBUN, SORT, DESCRIPTION, USE, VIEWCHECK
+			)
+			VALUES 
+			(
+				SRC.TENANTID, SRC.TENANT, SRC.TENANTNAME, SRC.SITE, SRC.GUBUN, SRC.SORT, SRC.DESCRIPTION, SRC.USE, SRC.VIEWCHECK
+			)
+		]]>
+	</MERGE_TENANT>
+	<DISABLE_TENANT>	<![CDATA[	UPDATE U_TENANTINFO SET VIEWCHECK = '0'			]]>	</DISABLE_TENANT>	
+
+	<MERGE_DIVISION>	<!-- 과 -->
+		<![CDATA[
+			MERGE INTO U_IBGINFO TGT
+			USING 
+			(	
+				SELECT
+			  		(SELECT NVL(MAX(IBGID) + 1, 1) FROM U_IBGINFO)       	AS IBGID,
+			  		(SELECT NVL(MAX(TO_NUMBER(IBG)) + 3, 3) FROM U_IBGINFO) AS IBG,
+			  		#DIVISION#<string>                                   	AS IBGNAME,
+			  		(
+			  			SELECT 
+			  				SITE
+			   			FROM U_SITEINFO
+			    		WHERE NAME = #SITE_NM#<string>
+			  		) AS SITE,
+			  		(	
+			  			SELECT 
+			  				 UT.TENANT
+			    		FROM U_TENANTINFO UT
+			     		JOIN U_SITEINFO US ON US.SITE = UT.SITE
+			    		WHERE US.NAME = #SITE_NM#<string> AND UT.TENANTNAME = #TENANT_NM#<string>
+			  		) AS TENANT,
+			  		CASE 
+			  		WHEN #SITE_NM#<string> LIKE '%지방국세청' THEN '청'
+			  		ELSE 
+			  			'' 
+			  		END AS GUBUN,
+			  		(SELECT NVL(MAX(SORT) + 1, 1) FROM U_IBGINFO)        								AS SORT,
+			 		#SITE_NM#<string> || '>' || #TENANT_NM#<string> || '>' || #DIVISION_NM#<string>  	AS DESCRIPTION,
+			 		 'Y'                                                 								AS USE,
+			  		'1'                                                  								AS VIEWCHECK
+				FROM DUAL
+			) src
+			ON (
+				TGT.SITE = SRC.SITE AND TGT.TENANT = SRC.TENANT AND TGT.IBGNAME = SRC.IBGNAME
+			)
+			WHEN MATCHED THEN
+			UPDATE
+			SET 
+				VIEWCHECK 	= SRC.VIEWCHECK,
+				GUBUN 		= SRC.GUBUN
+			WHEN NOT MATCHED THEN
+			INSERT (
+				IBGID, IBG, IBGNAME, SITE, TENANT, GUBUN, SORT, DESCRIPTION, USE, VIEWCHECK
+			)
+			VALUES 
+			(
+				SRC.IBGID, 	SRC.IBG, 	SRC.IBGNAME, 		SRC.SITE,  SRC.TENANT,
+				SRC.GUBUN,	SRC.SORT,  	SRC.DESCRIPTION,   	SRC.USE,   SRC.VIEWCHECK
+			)	
+		]]>
+	</MERGE_DIVISION>
+	<DISABLE_DIVISION>	<![CDATA[	UPDATE U_IBGINFO SET VIEWCHECK = '0'			]]>	</DISABLE_DIVISION>	
+	
+	<MERGE_TEAM>		<!-- 팀 -->
+	 	<![CDATA[
+	 		MERGE INTO U_AGTTEAMINFO TGT
+			USING 
+			(
+				SELECT
+					(SELECT NVL(MAX(TO_NUMBER(AGTTEAMID))+1, 1) FROM U_AGTTEAMINFO)	AS AGTTEAMID,
+					(SELECT NVL(MAX(TO_NUMBER(AGTTEAM))+4, 4)   FROM U_AGTTEAMINFO)	AS AGTTEAM,
+					#TEAM_NM#<string>												AS AGTTEAMNAME,
+					(
+			  			SELECT 
+			  				SITE
+			   			FROM U_SITEINFO
+			    		WHERE NAME = #SITE_NM#<string>
+			  		) AS SITE,
+			  		(	
+			  			SELECT 
+			  				 UT.TENANT
+			    		FROM U_TENANTINFO UT
+			     		JOIN U_SITEINFO US ON US.SITE = UT.SITE
+			    		WHERE US.NAME = #SITE_NM#<string> AND UT.TENANTNAME = #TENANT_NM#<string>
+			  		) AS TENANT,
+					(	
+			  			SELECT 
+			  				UI.IBG
+			  			FROM U_IBGINFO UI
+			     		JOIN U_SITEINFO   US ON US.SITE   = UI.SITE
+			     		JOIN U_TENANTINFO UT ON UT.TENANT = UI.TENANT
+			     		WHERE US.NAME = #SITE_NM#<string> AND UT.TENANTNAME = #TENANT_NM#<string> AND UI.IBGNAME = #DIVISION_NM#<string>
+			  		) AS IBG,
+					(SELECT NVL(MAX(SORT)+1, 1) FROM U_AGTTEAMINFO) AS SORT,
+					#SITE_NM#<string> || '>' || #TENANT_NM#<string> || '>' || #DIVISION_NM#<string> || '>' || #TEAM_NM#<string> AS DESCRIPTION,
+					'Y' AS USE,
+					'1' AS VIEWCHECK
+				FROM DUAL
+			) SRC
+			ON (
+				TGT.SITE = SRC.SITE AND TGT.TENANT = SRC.TENANT AND TGT.IBG = SRC.IBG AND TGT.AGTTEAMNAME = SRC.AGTTEAMNAME 
+			)
+			WHEN MATCHED THEN
+			UPDATE
+			SET
+				VIEWCHECK 	= SRC.VIEWCHECK
+			WHEN NOT MATCHED THEN
+			INSERT (
+				AGTTEAMID, AGTTEAM, AGTTEAMNAME, SITE, TENANT, IBG, SORT, DESCRIPTION, USE, VIEWCHECK
+			)
+			VALUES 
+			(
+				SRC.AGTTEAMID, SRC.AGTTEAM, SRC.AGTTEAMNAME, SRC.SITE, SRC.TENANT, SRC.IBG, SRC.SORT, SRC.DESCRIPTION, SRC.USE, SRC.VIEWCHECK
+			)	
+		]]>
+	</MERGE_TEAM>
+	<DISABLE_TEAM>		<![CDATA[	UPDATE U_AGTTEAMINFO SET VIEWCHECK = '0'		]]>	</DISABLE_TEAM>	
+
+	<!--	DEPT 처리	 -->
+	<!-- 
+	<DISABLE_DEPT>		<![CDATA[	UPDATE ESP_CORE.U_DEPT SET USE_FL = 'N'			]]>	</DISABLE_DEPT>
+	<GET_CURRENT_DEPT>
+        <![CDATA[
+        	SELECT SITE_ID, SITE, SITE_NM, TENANT_ID, TENANT, TENANT_NM, DEPT_ID, DEPT_NM, BRANCH_CODE, DEPT_CODE, PARENT_ID, NAME_TREE, CODE_TREE, DEPTH FROM ESP_CORE.DEPT_V		
+        ]]>	
+    </GET_CURRENT_DEPT>
+   	<GET_DEPT>
+   	    <![CDATA[	
+        	SELECT SITE_ID, TENANT_ID, DEPT_ID, DEPT_NM, DEPT_CODE, PARENT_ID, CODE_TREE, BRANCH_CODE FROM ESP_CORE.DEPT_V WHERE SITE = #site#<string> AND TENANT = #tenant#<string> AND NAME_TREE = #name_tree#<string>
+        ]]>
+    </GET_DEPT>		
+	<INSERT_DEPT>
+		<![CDATA[
+			INSERT INTO ESP_CORE.U_DEPT (ID, TENANT_ID, DEPT_NM,  DEPT_CODE, ABBR_NM, BRANCH_CODE, DEPT_ORD, PARENT_ID, USE_FL)
+			VALUES (
+				nextval('u_dept_id_seq'::regclass), 
+				( 
+					SELECT NT.ID FROM ESP_CORE.U_TENANT NT
+					INNER JOIN ESP_CORE.U_SITE NS ON NS.ID = NT.SITE_ID 
+					WHERE NS.SITE = #SITE#<STRING>  AND NT.TENANT = #TENANT#<STRING> 
+				),
+				#DEPT_NM#<STRING>,
+				#DEPT_CODE#<STRING>,
+				#ABBR_NM#<STRING>,
+                #BRANCH_CODE#<STRING>,
+				(SELECT COALESCE(MAX(DEPT_ORD), 0) + 1  FROM ESP_CORE.U_DEPT),
+				#PARENT_ID#<INT>,
+				'Y'
+			)
+		]]>
+	</INSERT_DEPT>
+	<UPDATE_DEPT>	
+		<![CDATA[
+			UPDATE ESP_CORE.U_DEPT SET 
+				USE_FL   	= 'Y',
+				DEPT_NM   	= #DEPT_NM#<STRING>,
+                BRANCH_CODE = #BRANCH_CODE#<STRING>,
+                PARENT_ID 	= #PARENT_ID#<INT>
+			WHERE TENANT_ID = (SELECT ID FROM ESP_CORE.U_TENANT UT  WHERE UT.SITE_ID = (SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #SITE#<STRING>) AND UT.TENANT  = #TENANT#<STRING>) AND DEPT_CODE = #DEPT_CODE#<STRING>
+		]]>
+	</UPDATE_DEPT>
+	 -->
+	
+	<!--  GRADE 처리	-->
+	<!-- 
+	<MERGE_GRADE>
+		<![CDATA[
+			WITH UPSERT AS
+			(
+				UPDATE ESP_CORE.U_GRADE
+				SET USE_FL = 'Y', GRADE_NM = #grade_nm#<string>
+				WHERE
+					SITE_ID = ( SELECT ID FROM U_SITE WHERE SITE = #site#<string> ) AND GRADE_NM = #grade_nm#<string> 
+				RETURNING *			
+			)
+			INSERT INTO ESP_CORE.U_GRADE
+			(
+				ID,
+				GRADE_NM,
+				GRADE_ORD,
+				SITE_ID,
+				USE_FL,
+				GRADE_CODE
+			) 
+			SELECT
+				nextval('u_grade_id_seq'::regclass) AS ID,
+				#grade_nm#<string>	AS GRADE_NM,	
+				( 
+					SELECT COALESCE(MAX(GRADE_ORD), 0) + 1 FROM ESP_CORE.U_GRADE UG, ESP_CORE.U_SITE US WHERE 
+					UG.SITE_ID = US.ID AND US.ID = (SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #site#<string>)
+				) AS GRADE_ORD,
+				( SELECT ID FROM ESP_CORE.U_SITE   WHERE SITE = #site#<string> ) AS SITE_ID,
+				'Y' AS USE_FL,
+				#grade_code#<string> AS GRADE_CODE
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+		]]>
+	</MERGE_GRADE>
+	<DISABLE_GRADE>		<![CDATA[	UPDATE ESP_CORE.U_GRADE SET USE_FL = 'N'	]]> </DISABLE_GRADE>
+	-->
+	<!--  POSITION 처리: position_nm 으로만 비교 -->
+	<!-- 
+	<MERGE_POSITION>
+		<![CDATA[
+			WITH UPSERT AS
+			(
+				UPDATE ESP_CORE.U_POSITION
+				SET USE_FL = 'Y', POSITION_NM = #POSITION_nm#<string>
+				WHERE
+					SITE_ID = ( SELECT ID FROM U_SITE WHERE SITE = #site#<string> ) AND POSITION_NM = #position_nm#<string>
+				RETURNING *			
+			)
+			INSERT INTO ESP_CORE.U_POSITION
+			(
+				ID,
+				POSITION_NM,
+				POSITION_ORD,
+				SITE_ID,
+				USE_FL,
+				POSITION_CODE
+			) 
+			SELECT
+				nextval('u_position_id_seq'::regclass) AS ID,
+				#POSITION_nm#<string>	AS POSITION_NM,	
+				( 
+					SELECT COALESCE(MAX(POSITION_ORD), 0) + 1 FROM ESP_CORE.U_POSITION UG, ESP_CORE.U_SITE US WHERE 
+					UG.SITE_ID = US.ID AND US.ID = (SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #site#<string>)
+				) AS POSITION_ORD,
+				( SELECT ID FROM ESP_CORE.U_SITE WHERE SITE = #site#<string> ) AS SITE_ID,
+				'Y' AS USE_FL,
+				#POSITION_code#<string> AS POSITION_CODE
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+		]]>
+	</MERGE_POSITION>
+	<DISABLE_POSITION>		<![CDATA[	UPDATE ESP_CORE.U_POSITION SET USE_FL = 'N'	]]> </DISABLE_POSITION>
+ 	-->
+	<!--  USER(사용자 처리 관련 필드) -->
+	<MERGE_USER>
+		<![CDATA[
+			MERGE INTO U_AGTINFO TGT
+			USING 
+			(
+				SELECT
+					#USER_NO#<string>  AS AGTID,
+					#USER_NO#<string>  AS AGTNAME,
+					#GRADE_NM#<string> AS POSITION,
+					(
+						SELECT 
+							US.SITE 
+						FROM U_SITEINFO US WHERE NAME = #SITE_NM#<string>
+					) AS SITE,
+					(
+						SELECT 
+				  			UT.TENANT
+				    	FROM U_TENANTINFO UT
+				     	JOIN U_SITEINFO US ON US.SITE = UT.SITE
+				   		WHERE US.NAME = #SITE_NM#<string> AND UT.TENANTNAME = #TENANT_NM#<string>
+					) AS TENANT,
+					(
+						SELECT 
+				  			UI.IBG
+				  		FROM U_IBGINFO UI
+				     	JOIN U_SITEINFO   US ON US.SITE   = UI.SITE
+				     	JOIN U_TENANTINFO UT ON UT.TENANT = UI.TENANT
+				     	WHERE US.NAME = #SITE_NM#<string> AND UT.TENANTNAME = #TENANT_NM#<string> AND UI.IBGNAME = #DIVISION_NM#<string>
+					) AS IBG,
+					(
+						SELECT 
+				  			UA.AGTTEAM
+				  		FROM U_AGTTEAMINFO UA
+				     	JOIN U_SITEINFO     US ON US.SITE   = UA.SITE
+				     	JOIN U_TENANTINFO   UT ON UT.TENANT = UA.TENANT
+				     	JOIN U_IBGINFO  	UI ON UI.IBG    = UA.IBG
+				     	WHERE US.NAME = #SITE_NM#<string> AND UT.TENANTNAME = #TENANT_NM#<string> AND UI.IBGNAME = #DIVISION_NM#<string> AND AGTTEAMNAME = #TEAM_NM#<string>
+					) AS AGTTEAM,
+					#DN#<string> AS AGTDN,
+					#DN#<string> AS DN,
+					'1'     	 AS VIEWCHECK,
+					'a'			 AS field1,
+					'Y'			 AS INSFLAG,
+					SYSDATE 	 AS ERSDBDATE
+				FROM DUAL
+			) SRC
+			ON ( TGT.AGTID = SRC.AGTID )
+			WHEN MATCHED THEN
+			UPDATE
+			SET 
+				SITE	  	= 	SRC.SITE,
+				TENANT		= 	SRC.TENANT,
+				IBG			=	SRC.IBG,
+				AGTTEAM		=	SRC.AGTTEAM,
+				AGTDN		=	SRC.AGTDN,
+				DN			=	SRC.DN,
+				POSITION    =	SRC.POSITION,
+				VIEWCHECK 	= 	SRC.VIEWCHECK,
+				INSFLAG		=	SRC.INSFLAG,
+				field1      =	SRC.field1,
+				ERSDBDATE 	=   SRC.ERSDBDATE
+			WHEN NOT MATCHED THEN
+			INSERT (
+				AGTID,
+				AGTNAME,
+				POSITION,
+				SITE,
+				TENANT,
+				IBG,
+				AGTTEAM,
+				AGTDN,
+				DN,
+				VIEWCHECK,
+				INSFLAG,
+				field1,
+				ERSDBDATE
+			)
+			VALUES 
+			(
+				SRC.AGTID,
+				SRC.AGTNAME,
+				SRC.POSITION,
+				SRC.SITE,
+				SRC.TENANT,
+				SRC.IBG,
+				SRC.AGTTEAM,
+				SRC.AGTDN,
+				SRC.DN,
+				SRC.VIEWCHECK,
+				SRC.INSFLAG,
+				SRC.field1,
+				SRC.ERSDBDATE
+			)	
+		]]>
+	</MERGE_USER>
+	<DISABLE_USER>	<![CDATA[	UPDATE U_AGTINFO SET VIEWCHECK = '0'		]]>	</DISABLE_USER>
+
+	<!-- Member 테이블 갱신 -->
+	<!-- 
+	<MERGE_MEMBER>
+		<![CDATA[
+			WITH UPSERT AS 
+			(
+				UPDATE ESP_CORE.U_MEMBER
+				SET 
+					USER_ID		=	(SELECT ID FROM U_USER WHERE USER_NO = #user_no#<string>),
+					DEPT_ID		=	(SELECT DEPT_ID FROM U_USER WHERE USER_NO = #user_no#<string>),
+					EDIT_ID		=	'SYSTEM',
+					EDIT_DT		=	CURRENT_TIMESTAMP
+				WHERE 
+					LOGIN_ID = #user_no#<string> 
+				RETURNING *
+			)
+			INSERT INTO ESP_CORE.U_MEMBER
+			(
+				ID,
+				LOGIN_ID,
+				LOGIN_NM,
+				LOGIN_PWD,
+				MEMBER_STATE_CD,
+				AUTH_ID,
+				USER_ID,
+				DEPT_ID,
+				REG_ID,
+				REG_DT
+			)
+			SELECT
+				nextval('u_member_id_seq'::regclass),	
+				#user_no#<string>,
+				#user_nm#<string>,
+				#user_pw#<string>,
+				GET_MEMBER_STATE_CD_FN('active'),
+				(SELECT ID FROM U_AUTH WHERE AUTH_NM LIKE '%일반사용자%' ORDER BY ID LIMIT 1),
+				(SELECT ID FROM U_USER WHERE USER_NO      = #user_no#<string>),
+				(SELECT DEPT_ID FROM U_USER WHERE USER_NO = #user_no#<string>),
+				'SYSTEM',
+				CURRENT_TIMESTAMP
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+		]]>
+	</MERGE_MEMBER>	
+	-->
+	
+	<!--  U_USER 테이블에서 삭제처리된 사용자에 대해서 계정 잠금 U_MEMBER 테이블의 MEMBER_STATE_CD의 상태를 DEL로 변경 -->
+	<!-- 
+	<DEL_MEMBER_STATE>	
+		<![CDATA[  
+			UPDATE ESP_CORE.U_MEMBER SET MEMBER_STATE_CD = GET_MEMBER_STATE_CD_FN('deleted')
+			WHERE LOGIN_ID  IN ( SELECT USER_NO FROM ESP_CORE.U_USER WHERE USE_FL = 'N')
+		]]>
+	</DEL_MEMBER_STATE>
+	 -->
+	<!--  U_MEMBER 테이블을 이용해서 U_USER의 LOGIN_FL값 갱신 -->
+	<!-- 
+	<UPDATE_USER_LOGIN_FL>
+		<![CDATA[  
+			UPDATE ESP_CORE.U_USER SET LOGIN_FL = 'Y'
+			WHERE ID IN ( SELECT USER_ID FROM ESP_CORE.U_MEMBER WHERE USER_ID IS NOT NULL )
+		]]>
+	</UPDATE_USER_LOGIN_FL>
+	-->
+	 
+	<!--  ESP_UC 스키마의 서비스 정보 갱신	-->
+	<!-- 
+	<MERGE_USER_SERVICE>
+		<![CDATA[  
+			WITH UPSERT AS 
+			(
+				UPDATE ESP_UC.U_USER_SERVICE
+				SET 
+					USER_NO		=	(SELECT ID FROM U_USER WHERE USER_NO = #user_no#<string>),
+					EDIT_ID		=	'SYSTEM',
+					EDIT_DT		=	CURRENT_TIMESTAMP
+				WHERE 
+					USER_NO 	= #user_no#<string> 
+				RETURNING *
+			)
+			INSERT INTO ESP_UC.U_USER_SERVICE
+			(
+				ID,
+				USER_NO,
+				MCID_FL,
+				PIC_FL,
+				REG_ID,
+				REG_DT
+			)
+			SELECT
+				nextval('u_user_service_id_seq'::regclass),	
+				#user_no#<string>,
+				#mcid_fl#<string>,
+				#pic_fl#<string>,
+				'SYSTEM',
+				CURRENT_TIMESTAMP
+			WHERE NOT EXISTS ( SELECT * FROM UPSERT )
+	
+		]]>
+	</MERGE_USER_SERVICE>
+	-->
+	<!-- Postgres의 경우 해당 코드가 소스에 존재하기 때문에 아래 INSERT_BATCH, UPDATE_BULK 항목은 불필요함 -->
+	<INSERT_BATCH>
+		<![CDATA[	
+			INSERT INTO E_BATCHWORK (ID, APP_URL, REQ_USER, STATUS, TITLE, DESCRIPTION, RESULT, CAUSE, YMD, REQ_DT) 
+			VALUES 
+			(
+				(SELECT COALESCE(MAX(ID), 0) + 1 FROM E_BATCHWORK),
+				#REQ_URL#<STRING>, #REQ_USER#<STRING>, #STATUS#<STRING>, #TITLE#<STRING>, #DESCRIPTION#<STRING>, #RESULT#<STRING>, #CAUSE#<STRING>,
+				CURRENT_DATE, CURRENT_TIMESTAMP
+			)
+		]]>
+	</INSERT_BATCH>
+	<UPDATE_BULK>
+		<![CDATA[	
+            INSERT INTO E_BULKWORK ( ID, TOKEN, APP_URL, REQ_URL, REQ_USER, REQ_DATA, STATUS, TITLE, DESCRIPTION, FILE_NM, RESULT, CAUSE, CMPLT_DT, REQ_DT) VALUES (
+                (SELECT COALESCE(MAX(ID), 0) + 1 FROM E_BULKWORK),
+                #TOKEN#<STRING>,
+                #REQ_URL#<STRING>,
+                #REQ_URL#<STRING>,
+                #REQ_USER#<STRING>,
+                #REQ_DATA#<STRING>,
+                #STATUS#<STRING>,
+                #TITLE#<STRING>,
+                #DESCRIPTION#<STRING>,
+                #FILE_NM#<STRING>,
+                #RESULT#<STRING>,
+                #CAUSE#<STRING>,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+            )
+            ON CONFLICT (TOKEN) DO UPDATE
+            SET
+                STATUS      = EXCLUDED.STATUS,
+                TITLE       = EXCLUDED.TITLE,
+                DESCRIPTION = EXCLUDED.DESCRIPTION,
+                FILE_NM     = EXCLUDED.FILE_NM,
+                RESULT      = EXCLUDED.RESULT,
+                CAUSE       = EXCLUDED.CAUSE,
+                CMPLT_DT    = EXCLUDED.CMPLT_DT
+		]]>
+	</UPDATE_BULK>
+	<!-- 
+	<UPDATE_BULK>
+		<![CDATA[	
+			UPDATE E_BULKWORK SET STATUS = 'COMPLETE', TITLE = #TITLE#<STRING>, DESCRIPTION = #DESCRIPTION#<STRING>, 
+			FILE_NM = #FILE_NM#<STRING>, RESULT = #RESULT#<STRING>, CAUSE = #CAUSE#<STRING>, CMPLT_DT = CURRENT_TIMESTAMP	
+			WHERE TOKEN = #TOKEN#<STRING>
+		]]>
+	</UPDATE_BULK>
+	-->	
+</sqlMap>

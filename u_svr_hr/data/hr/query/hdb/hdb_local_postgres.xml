@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+	<URL></URL>
+	<DATABASE>postgres</DATABASE>
+   	<HOSTNAME>10.0.7.95</HOSTNAME>
+	<DBNAME>ecsdb</DBNAME>
+   	<DBUSER>esp</DBUSER>
+   	<DBPASSWORD>Zt+d3lC/P8z0uwxKPtIweg==</DBPASSWORD>
+	<DBPORT>5432</DBPORT>
+
+	<!-- 사용자 정보 갱신 : X의 경우 DN이 존재하지 않는 경우를 의미	-->
+   	<UPDATE_DN>
+        <![CDATA[
+            UPDATE ESP_CORE.U_USER SET DN =
+            CASE
+            WHEN #DN#<STRING>  = 'X'	THEN NULL
+            ELSE 
+            	#DN#<STRING>
+            END
+    		WHERE USER_NO = #USER_NO#<STRING>
+        ]]>
+    </UPDATE_DN>
+    
+    <!-- 내선 중복 체크										-->
+  	<DUPLICATE_DN>
+  		<![CDATA[
+			WITH 
+			DUP_USERS AS (  -- 중복 내선 정보(다수 가능)
+				SELECT
+			    	U.USER_NO   AS USER_NO,
+			        U.DN        AS DN,
+			        U.USER_NM   AS USER_NM,
+			        G.GRADE_NM  AS GRADE_NM,
+			        D.DEPT_NM   AS DEPT_NM,
+			        COUNT(*) OVER (PARTITION BY U.DN) AS USER_COUNT
+				FROM U_USER U
+			    LEFT JOIN U_DEPT  D ON D.ID = U.DEPT_ID
+			    LEFT JOIN U_GRADE G ON G.ID = U.GRADE_ID
+			    WHERE U.USE_FL = 'Y'  AND U.DN IN ( %s )
+			),
+			RECEIVER_USERS AS (  -- 수신자(다수 가능하며 5명까지로 고정함)
+				SELECT
+			    	M.LOGIN_ID AS USER_NO,
+			        NULL       AS DN,
+			        M.LOGIN_NM AS USER_NM,
+			        NULL       AS GRADE_NM,
+			        NULL       AS DEPT_NM,
+			        0       AS USER_COUNT
+			 	FROM U_MEMBER M
+			    WHERE M.MEMBER_STATE_CD = 'ACTIVE'
+			    LIMIT 5
+			),
+			SENDER_USERS AS (  -- 전송자(한명)
+				SELECT
+			    	M.LOGIN_ID AS USER_NO,
+			        NULL       AS DN,
+			        M.LOGIN_NM AS USER_NM,
+			        NULL       AS GRADE_NM,
+			        NULL       AS DEPT_NM,
+			        0       AS USER_COUNT
+			   	FROM U_MEMBER M
+			    WHERE M.AUTH_ID = 1 AND M.LOGIN_ID = 'ecstel'
+			),
+			ALL_USERS AS (  -- UNION 결과만 모아서
+				SELECT 'DUPUSER'    AS TYPE, USER_NO, DN, USER_NM, GRADE_NM, DEPT_NM, USER_COUNT
+			    FROM DUP_USERS WHERE USER_COUNT > 1
+			    UNION ALL
+			    SELECT 'RECEIVER'   AS TYPE, USER_NO, DN, USER_NM, GRADE_NM, DEPT_NM, USER_COUNT
+			    FROM RECEIVER_USERS
+			    UNION ALL
+			    SELECT 'SENDER'     AS TYPE, USER_NO, DN, USER_NM, GRADE_NM, DEPT_NM, USER_COUNT
+			    FROM SENDER_USERS
+			)
+			SELECT
+				'내선중복 알림'            AS TITLE,
+			    '내선중복이 발생하였습니다.'  AS CONTENT,
+			    AU.TYPE,
+			    AU.USER_NO,
+			    AU.DN,
+			    AU.USER_NM,
+			    AU.GRADE_NM,
+			    AU.DEPT_NM,
+			    AU.USER_COUNT
+			FROM ALL_USERS AU
+			ORDER BY AU.TYPE, AU.DN
+			
+		]]>
+  	</DUPLICATE_DN>
+  	
+  	<!-- 
+  	<INSERT_HISTORY>
+  		<![CDATA[
+  	
+  		]]>
+  	</INSERT_HISTORY>
+ 	-->
+  	
+</sqlMap>

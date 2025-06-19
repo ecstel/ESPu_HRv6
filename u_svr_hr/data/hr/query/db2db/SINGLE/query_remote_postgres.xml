@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+	<URL></URL>
+	<DATABASE>postgres</DATABASE>
+   	<HOSTNAME>10.0.7.95</HOSTNAME>
+	<DBNAME>exdb</DBNAME>
+   	<DBUSER>ex</DBUSER>
+   	<DBPASSWORD>Zt+d3lC/P8z0uwxKPtIweg==</DBPASSWORD>
+	<DBPORT>5432</DBPORT>
+
+	<!-- 1번 경우에 대한 예시 
+	 * 주요 항목 
+	 * - 모든 항목(직위,직책,부서명)을 순수 이름으로 자체 ID 처리
+	 * - 부서는 ‡(이중단검) 표시로 구분하여 처리
+	 * - ABBR_NM(약어)도 표시함
+	 * - 전화번호(내선/휴대폰/직통)에 대해서 패턴처리함
+	 * - 직취,직책은 존재하지 않을 수 있음. 단 부서는 모두 존재함
+	*********************************************************************** 
+	 * 1. GET_SOURCE_[사이트명] : 하나의 질의문을 통해서 원격지 DB 질의
+	 *    직위,직책은 없을 수 있고(LEFT JOIN) 부서는 모두 존재함(INNER JOIN)
+     * 2. GET_SOURCE_[DEPT/GRADE/POSITION/USER] : 다수의 질의문을 통해서 원격지 DB 질의                       
+	 * 3. 아무것도 없는 경우 : 파일을 통한 DB 동기화시 자동 처리 
+	 *********************************************************************** 
+	-->
+	<GET_SOURCE_EX>
+		<![CDATA[	
+			SELECT
+				HU.SWBEONHO 		AS USER_NO,
+				HU.HGSEONGMYEONG 	AS USER_NM,
+				HG.JWMYEONG 		AS GRADE_NM,
+				HP.JJMYEONG 		AS POSITION_NM, 
+				HD.SITE 			AS SITE,
+				HD.SITE_NM 			AS SITE_NM,
+				HD.TENANT 			AS TENANT,
+				HD.TENANT_NM 		AS TENANT_NM,
+				HD.DEPT_NM			AS DEPT_NM,
+				regexp_replace(regexp_replace(HD.DEPT_NM, '\"', '', 'g'), '[<>&%]', ' ', 'g') AS ABBR_NM,
+				null::varchar		AS BRANCH_CODE,						
+				HD.NAME_TREE 		AS NAME_TREE,
+				REGEXP_REPLACE(HU.PSBEONHO, 	'[^0-9]', '', 'g')	AS DIRECT_NUMBER,
+				REGEXP_REPLACE(HU.IDJHBEONHO, 	'[^0-9]', '', 'g') 	AS MOBILE,
+				CASE 
+				WHEN HU.IBJHBEONHO LIKE '054-811%' THEN RIGHT(REGEXP_REPLACE(HU.IBJHBEONHO, '[^0-9]', '', 'g'), 4) 
+				ELSE
+					REGEXP_REPLACE(HU.SNJHBEONHO, 	'[^0-9]', '', 'g')
+				END AS DN
+			FROM HR_PHAISJBM HU
+			LEFT JOIN HR_PHAJWCDM HG ON HG.JIKWI   = HU.JIKWI
+			LEFT JOIN HR_PHAJJCDM HP ON HP.JIKJONG = HU.JIKJONG 
+			INNER JOIN (
+				WITH RECURSIVE DEPTTREE AS (
+				 	SELECT 
+						D.BSCODE 		AS DEPT_CODE,
+				  		D.HGBSMYEONG 	AS DEPT_NM,
+				      	D.HGBSMYEONG  	AS NAME_TREE
+				  	FROM HR_PHABSCDM D WHERE JSSWBSCODE IS NULL OR JSSWBSCODE = ''
+				    UNION ALL
+				    SELECT 
+					    D.BSCODE 		AS DEPT_CODE,
+				   	    D.HGBSMYEONG	AS DEPT_NM,
+				     	DT.NAME_TREE || '‡' || D.HGBSMYEONG AS NAME_TREE
+				    FROM HR_PHABSCDM D
+				    INNER JOIN DEPTTREE DT ON D.JSSWBSCODE = DT.DEPT_CODE
+				)
+				SELECT 
+					'EX'							AS SITE, 	
+					'한국도로공사'						AS SITE_NM, 
+					'EX'							AS TENANT, 	
+					'한국도로공사'						AS TENANT_NM, 
+					DEPT_CODE, DEPT_NM, NAME_TREE
+				FROM DEPTTREE
+				ORDER BY NAME_TREE
+			) HD ON HD.DEPT_CODE = HU.BSCODE
+		]]>
+	</GET_SOURCE_EX>
+</sqlMap>

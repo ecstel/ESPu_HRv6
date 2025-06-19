@@ -7,6 +7,9 @@
  * in the user manual at https://docs.gradle.org/5.6.4/userguide/multi_project_builds.html
  */
 
-rootProject.name = 'ECS_HR_V6.1'
+rootProject.name = 'ESPu-HRv6'
 
-include 'ecs_svr_hr'
+include 'u_com'
+include 'u_svr_hr'
+include 'u_svr_img'
+include 'u_svr_alert'

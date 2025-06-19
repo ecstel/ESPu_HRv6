@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+	<URL></URL>
+	<DATABASE>oracle</DATABASE>
+	<HOSTNAME>10.0.55.114</HOSTNAME>
+	<DBNAME>ecsdb</DBNAME>
+	<DBUSER>esp</DBUSER>
+	<DBPASSWORD>RpEqTVZ6o+p2lP0cEO2T2w==</DBPASSWORD>
+	<DBPORT>1521</DBPORT>
+
+	 <!--  USER_ID, PICTURE, PICURL -->
+	 <IMAGE>
+	 	<![CDATA[	
+			SELECT
+				USER_NO 		  	AS USER_ID,
+				USER_NO || '.jpg' 	AS PICTURE,
+				'' 					AS PICURL
+			FROM ESP_CORE.U_USER WHERE USER_NO LIKE 'SE221%' -- WHERE USER_NO NOT IN ('SE15240') AND USER_NO = 'SI24028'
+		  ]]>
+	</IMAGE>
+	
+	<!-- 
+	<CLEAR>	<![CDATA[	UPDATE U_USER SET PICTURE = NULL												]]>	</CLEAR>
+	<UPDATE><![CDATA[	UPDATE U_USER SET PICTURE = #PICTURE#<STRING> WHERE USER_ID = #USER_ID#<STRING>	]]>	</UPDATE>	
+	 -->
+
+
+	<!-- Postgres의 경우 해당 코드가 소스에 존재하기 때문에 아래 INSERT_BATCH, UPDATE_BULK 항목은 불필요함 -->
+	<INSERT_BATCH>
+		<![CDATA[
+			INSERT INTO ESP_UC.E_BATCHWORK (ID, APP_URL, REQ_USER, STATUS, TITLE, DESCRIPTION, RESULT, CAUSE, YMD, REQ_DT)
+			VALUES
+			(
+				ESP_UC.E_BATCHWORK_ID_SEQ.NEXTVAL
+				#REQ_URL#<STRING>, #REQ_USER#<STRING>, #STATUS#<STRING>, #TITLE#<STRING>, #DESCRIPTION#<STRING>, #RESULT#<STRING>, #CAUSE#<STRING>,
+				CURRENT_DATE, CURRENT_TIMESTAMP
+			)
+		]]>
+	</INSERT_BATCH>
+	<UPDATE_BULK>
+		<![CDATA[
+			MERGE INTO ESP_UC.E_BULKWORK tgt
+			USING (
+				SELECT
+					#TOKEN#<STRING>       				AS TOKEN,
+					#REQ_URL#<STRING>             		AS APP_URL,
+					#REQ_URL#<STRING>             		AS REQ_URL,
+					#REQ_USER#<STRING>              	AS REQ_USER,
+					#REQ_DATA#<STRING>    				AS REQ_DATA,
+					#STATUS#<STRING>                	AS STATUS,
+					#TITLE#<STRING>                	 	AS TITLE,
+					#DESCRIPTION#<STRING>           	AS DESCRIPTION,
+					#FILE_NM#<STRING>    				AS FILE_NM,
+					#RESULT#<STRING>                	AS RESULT,
+					#CAUSE#<STRING>                		AS CAUSE,
+					CURRENT_TIMESTAMP               	AS CMPLT_DT,
+					CURRENT_TIMESTAMP               	AS REQ_DT
+				FROM DUAL
+			) src
+			ON (tgt.TOKEN = src.TOKEN)
+			WHEN MATCHED THEN
+				UPDATE SET
+					tgt.STATUS      = src.STATUS,
+					tgt.TITLE       = src.TITLE,
+					tgt.DESCRIPTION = src.DESCRIPTION,
+					tgt.FILE_NM     = src.FILE_NM,
+					tgt.RESULT      = src.RESULT,
+					tgt.CAUSE       = src.CAUSE,
+					tgt.CMPLT_DT    = src.CMPLT_DT
+			WHEN NOT MATCHED THEN
+				INSERT (
+					ID,
+					TOKEN,
+					APP_URL,
+					REQ_URL,
+					REQ_USER,
+					REQ_DATA,
+					STATUS,
+					TITLE,
+					DESCRIPTION,
+					FILE_NM,
+					RESULT,
+					CAUSE,
+					CMPLT_DT,
+					REQ_DT
+				)
+				VALUES (
+					ESP_UC.E_BULKWORK_ID_SEQ.NEXTVAL,
+					src.TOKEN,
+					src.APP_URL,
+					src.REQ_URL,
+					src.REQ_USER,
+					src.REQ_DATA,
+					src.STATUS,
+					src.TITLE,
+					src.DESCRIPTION,
+					src.FILE_NM,
+					src.RESULT,
+					src.CAUSE,
+					src.CMPLT_DT,
+					src.REQ_DT
+				)
+		]]>
+	</UPDATE_BULK>
+</sqlMap>

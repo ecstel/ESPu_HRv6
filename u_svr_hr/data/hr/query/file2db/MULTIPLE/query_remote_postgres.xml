@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+	<URL></URL>
+	<DATABASE>postgres</DATABASE>
+   	<HOSTNAME>10.0.7.95</HOSTNAME>
+	<DBNAME>exdb</DBNAME>
+   	<DBUSER>ex</DBUSER>
+   	<DBPASSWORD>Zt+d3lC/P8z0uwxKPtIweg==</DBPASSWORD>
+	<DBPORT>5432</DBPORT>
+
+	<!-- 3번에 대한 예시
+	*********************************************************************** 
+	 * 1. GET_SOURCE_[사이트명] : 하나의 질의문을 통해서 원격지 DB 질의
+	 *    직위,직책은 없을 수 있고(LEFT JOIN) 부서는 모두 존재함(INNER JOIN)
+     * 2. GET_SOURCE_[DEPT/GRADE/POSITION/USER] : 다수의 질의문을 통해서 원격지 DB 질의                       
+	 * 3. 아무것도 없는 경우 : 파일을 통한 DB 동기화시 자동 처리 
+	 *********************************************************************** 
+	-->
+	
+</sqlMap>

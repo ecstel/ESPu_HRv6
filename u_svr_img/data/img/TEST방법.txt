@@ -1,0 +1,12 @@
+-------------------------------------------------------------
+ HTTPS의 경우 아래와 같은 방식으로 테스트
+-------------------------------------------------------------
+윈도우 C:\Windows\System32\drivers\etc\hosts
+10.0.55.140		pic.ecstel.co.kr
+
+리눅스 /etc/hosts
+10.0.55.140		pic.ecstel.co.kr
+
+호출방식
+wget --no-check-certificate https://pic.ecstel.co.kr/12345678.jpg -O /home/euc/data/picture/12345678.jpg
+

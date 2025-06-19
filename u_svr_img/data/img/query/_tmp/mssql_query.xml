@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sqlMap>
+	<DATABASE>mssql</DATABASE>
+    <HOSTNAME>10.0.55.114</HOSTNAME>
+    <DBNAME>eucdb</DBNAME>
+    <DBUSER>SA</DBUSER>
+    <DBPASSWORD>Zt+d3lC/P8z0uwxKPtIweg==</DBPASSWORD>
+    <DBPORT>1433</DBPORT>
+
+	 <!--  USER_ID, PICTURE, PICURL -->
+	 <IMAGE>
+	 	<![CDATA[	
+			SELECT
+				USER_ID 		 AS USER_ID,
+				USER_ID + '.jpg' AS PICTURE,
+				'' AS PICURL
+			FROM U_USER
+		]]>
+	</IMAGE>
+	
+	<CLEAR> <![CDATA[   UPDATE U_USER SET PICTURE = NULL                        ]]> </CLEAR>
+    <UPDATE><![CDATA[   UPDATE U_USER SET PICTURE = #PICTURE#<STRING> WHERE USER_ID = #USER_ID#<STRING> ]]> </UPDATE>
+</sqlMap>
